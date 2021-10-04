@@ -1,7 +1,7 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <stdlib.h>
+#include <stdio.h>
 #include <inttypes.h>
+
 #include "mos6502.h"
 
 

@@ -1,22 +1,38 @@
 #include <inttypes.h>
 
-static const uint8_t C_Mask = 0x01;
-static const uint8_t Z_Mask = 0x02;
-static const uint8_t I_Mask = 0x04;
-static const uint8_t D_Mask = 0x08;
-static const uint8_t B_Mask = 0x10;
-static const uint8_t V_Mask = 0x40;
-static const uint8_t N_Mask = 0x80;
+#define C_Mask ((uint8_t) 0x01)  // 0b00000001
+#define Z_Mask ((uint8_t) 0x02)  // 0b00000010
+#define I_Mask ((uint8_t) 0x04)  // 0b00000100
+#define D_Mask ((uint8_t) 0x08)  // 0b00001000
+#define B_Mask ((uint8_t) 0x10)  // 0b00010000
+#define V_Mask ((uint8_t) 0x40)  // 0b01000000
+#define N_Mask ((uint8_t) 0x80)  // 0b10000000
 
-static const uint16_t NMI_VectorL = 0xFFFA;
-static const uint16_t NMI_VectorH = 0xFFFB;
-static const uint16_t RST_VectorL = 0xFFFC;
-static const uint16_t RST_VectorH = 0xFFFD;
-static const uint16_t IRQ_VectorL = 0xFFFE;
-static const uint16_t IRQ_VectorH = 0xFFFF;
+#define SET_C(x) ((x) ? (cpu->P |= C_Mask) : (cpu->P &= (~C_Mask)))
+#define SET_Z(x) ((x) ? (cpu->P |= Z_Mask) : (cpu->P &= (~Z_Mask)))
+#define SET_I(x) ((x) ? (cpu->P |= I_Mask) : (cpu->P &= (~I_Mask)))
+#define SET_D(x) ((x) ? (cpu->P |= D_Mask) : (cpu->P &= (~D_Mask)))
+#define SET_B(x) ((x) ? (cpu->P |= B_Mask) : (cpu->P &= (~B_Mask)))
+#define SET_V(x) ((x) ? (cpu->P |= V_Mask) : (cpu->P &= (~V_Mask)))
+#define SET_N(x) ((x) ? (cpu->P |= N_Mask) : (cpu->P &= (~N_Mask)))
 
-static const uint16_t SP_H = 0x0100;
-static const uint16_t ZPG_H = 0x0000;
+#define IS_C ((cpu->P & C_Mask) ? 1 : 0)
+#define IS_Z ((cpu->P & Z_Mask) ? 1 : 0)
+#define IS_I ((cpu->P & I_Mask) ? 1 : 0)
+#define IS_D ((cpu->P & D_Mask) ? 1 : 0)
+#define IS_B ((cpu->P & B_Mask) ? 1 : 0)
+#define IS_V ((cpu->P & V_Mask) ? 1 : 0)
+#define IS_N ((cpu->P & N_Mask) ? 1 : 0)
+
+#define NMI_VectorL  ((uint16_t) 0xFFFA)
+#define NMI_VectorH  ((uint16_t) 0xFFFB)
+#define RST_VectorL  ((uint16_t) 0xFFFC)
+#define RST_VectorH  ((uint16_t) 0xFFFD)
+#define IRQ_VectorL  ((uint16_t) 0xFFFE)
+#define IRQ_VectorH  ((uint16_t) 0xFFFF)
+
+#define SP_H ((uint16_t) 0x0100)
+#define ZPG_H ((uint16_t) 0x0000)
 
 typedef struct _MOS6502 MOS6502;
 typedef uint8_t (* MemRead)(uint16_t addr);
@@ -32,7 +48,7 @@ typedef struct _Instruction
 
 struct _MOS6502
 {
-    uint64_t cycles;
+    uint64_t instr_cycles;
 
     MemRead read;
     MemWrite write;
@@ -75,6 +91,7 @@ uint16_t mos6502_ZpgYIdxMode(MOS6502 *cpu);
 void mos6502_ADC(MOS6502 *cpu, uint16_t src);
 void mos6502_AND(MOS6502 *cpu, uint16_t src);
 void mos6502_ASL(MOS6502 *cpu, uint16_t src);
+void mos6502_ASL_AccMode(MOS6502 *cpu, uint16_t src);
 void mos6502_BCC(MOS6502 *cpu, uint16_t src);
 void mos6502_BCS(MOS6502 *cpu, uint16_t src);
 void mos6502_BEQ(MOS6502 *cpu, uint16_t src);
@@ -105,6 +122,7 @@ void mos6502_LDA(MOS6502 *cpu, uint16_t src);
 void mos6502_LDX(MOS6502 *cpu, uint16_t src);
 void mos6502_LDY(MOS6502 *cpu, uint16_t src);
 void mos6502_LSR(MOS6502 *cpu, uint16_t src);
+void mos6502_LSR_AccMode(MOS6502 *cpu, uint16_t src);
 void mos6502_NOP(MOS6502 *cpu, uint16_t src);
 void mos6502_ORA(MOS6502 *cpu, uint16_t src);
 void mos6502_PHA(MOS6502 *cpu, uint16_t src);
@@ -112,7 +130,9 @@ void mos6502_PHP(MOS6502 *cpu, uint16_t src);
 void mos6502_PLA(MOS6502 *cpu, uint16_t src);
 void mos6502_PLP(MOS6502 *cpu, uint16_t src);
 void mos6502_ROL(MOS6502 *cpu, uint16_t src);
+void mos6502_ROL_AccMode(MOS6502 *cpu, uint16_t src);
 void mos6502_ROR(MOS6502 *cpu, uint16_t src);
+void mos6502_ROR_AccMode(MOS6502 *cpu, uint16_t src);
 void mos6502_RTI(MOS6502 *cpu, uint16_t src);
 void mos6502_RTS(MOS6502 *cpu, uint16_t src);
 void mos6502_SBC(MOS6502 *cpu, uint16_t src);
