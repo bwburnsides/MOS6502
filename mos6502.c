@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include "mos6502.h"
-#include "mos6502_opcodes.h"
 
 #define Inst(opcode, amode, func) cpu->instructions[opcode].mode = &amode; cpu->instructions[opcode].ucode = &func
 
@@ -263,22 +262,40 @@ void _mos6502_build_instructions(MOS6502 *cpu)
 
 uint16_t mos6502_AccMode(MOS6502 *cpu)
 {
-    return 0;
+    return 0;  // value is unused
 }
 
 uint16_t mos6502_AbsMode(MOS6502 *cpu)
 {
-    uint16_t addrL;
-    uint16_t addrH;
-
-    addrL = cpu->read(cpu->PC++);
-    addrH = cpu->read(cpu->PC++);
+    // JMP $4032
+    // 4C 32 40
+    //  |  |  |
+    //  |  |  -- Addr H
+    //  |  ----- Addr L
+    //  -------- Opcode
+    //     ^
+    //     |
+    //     ----- PC
+    // Return $4032
+   
+    uint16_t addrL = cpu->read(cpu->PC++);
+    uint16_t addrH = cpu->read(cpu->PC++);
 
     return (addrH << 8) + addrL;
 }
 
 uint16_t mos6502_ImmMode(MOS6502 *cpu)
 {
+    // ORA #$B2
+    // 09  B2
+    //  |   |
+    //  |   -- Imm
+    //  ------ Opcode
+    //      ^
+    //      |
+    //      -- PC
+    // Return and increment PC
+ 
     return cpu->PC++;
 }
 
@@ -289,140 +306,186 @@ uint16_t mos6502_ImpMode(MOS6502 *cpu)
 
 uint16_t mos6502_IndMode(MOS6502 *cpu)
 {
-    uint16_t addrL;
-    uint16_t addrH;
-    uint16_t ind_addr;
-    uint16_t effL;
-    uint16_t effH;
+    // Memory:    
+    // 1000 52 3A 04 D3 93 00 3F 93 84    
 
-    addrL = cpu->read(cpu->PC++);
-    addrH = cpu->read(cpu->PC++);
-    ind_addr = (addrH << 8) + addrL;
+    // Instruction:    
+    // JMP  ($1000) 
+    // Return $3A52
 
-    effL = cpu->read(ind_addr);
-    effH = cpu->read(ind_addr++);
+    uint16_t addrL = cpu->read(cpu->PC++);
+    uint16_t addrH = cpu->read(cpu->PC++);
+    uint16_t addr = (addrH << 8) + addrL;
 
-    return (effH << 8) + effL;
+    return (cpu->read(addr) << 8) + cpu->read(addr + 1);
 }
 
 uint16_t mos6502_RelMode(MOS6502 *cpu)
 {
-    // TODO: see if can do this with signed ints
-	uint16_t offset;
-	uint16_t addr;
+    // BEQ #$B2
+    // F0 B2
+    //  |  |
+    //  |  -- Offset
+    //  ----- Opcode
+    //     ^
+    //     |
+    //     -- PC
+    // Return PC + Offset
 
-	offset = cpu->read(cpu->PC++);
+    uint16_t offset = cpu->read(cpu->PC++);
+
 	if (offset & 0x80)
         offset |= 0xFF00;
 
-	return cpu->PC + offset;
+	return cpu->PC + (int16_t) offset;
+
 }
 
 uint16_t mos6502_ZpgMode(MOS6502 *cpu)
 {
+    // STA #$62
+    // 85 62
+    //  |  |
+    //  |  -- ZPG Addr
+    //  ----- Opcode
+    //     ^
+    //     |
+    //     -- PC
+    // Return ZPG_H + ZPG Addr
+
     return ZPG_H + cpu->read(cpu->PC++);
 }
 
 uint16_t mos6502_XIdxIndMode(MOS6502 *cpu)
 {
-	uint16_t zeroL;
-	uint16_t zeroH;
+    // LDA ($20, X)     X contains $04
+    // 0024: 74 20
+    // X + $20 = $24
+    // Return Addr at $24 --> $2074
 
-	zeroL = (cpu->read(cpu->PC++) + cpu->X) % 256;
-	zeroH = (zeroL + 1) % 256;
+    // A1 20
+    //  |  |
+    //  |  -- Offset
+    //  ----- Opcode
+    //     ^
+    //     |
+    //     -- PC
 
-	return cpu->read(zeroL) + (cpu->read(zeroH) << 8);
+    uint8_t offset = cpu->read(cpu->PC++);
+    uint16_t ind_addr = ZPG_H + (cpu->X + offset);
+
+    uint16_t addrL = cpu->read(ind_addr++);
+    uint16_t addrH = cpu->read(ind_addr);
+
+    return (addrH << 8) + addrL;
 }
 
 uint16_t mos6502_IndYIdxMode(MOS6502 *cpu)
 {
-	uint16_t zeroL;
-	uint16_t zeroH;
+    // LDA ($86),Y      Y = 10
+    // B1 86
+    //  |  |
+    //  |  -- Offset
+    //  ----- Opcode
+    //     ^
+    //     |
+    //     -- PC
 
-	zeroL = cpu->read(cpu->PC++);
-	zeroH = (zeroL + 1) % 256;
+    // 0086: 28 40
+    
+    // 4028 + 10 = 4038
+    // Return 4038
 
-	return cpu->read(zeroL) + (cpu->read(zeroH) << 8) + cpu->Y;
+    uint16_t zpg_addr = ZPG_H | cpu->read(cpu->PC++);
+    uint16_t ind_addrL = cpu->read(zpg_addr++); 
+    uint16_t ind_addrH = cpu->read(zpg_addr++);
+
+    return (ind_addrH << 8) + ind_addrL + cpu->Y;
 }
 
 uint16_t mos6502_AbsXIdxMode(MOS6502 *cpu)
 {
-	uint16_t addrL;
-	uint16_t addrH;
+	uint16_t addrL = cpu->read(cpu->PC++);
+	uint16_t addrH = cpu->read(cpu->PC++);
 
-	addrL = cpu->read(cpu->PC++);
-	addrH = cpu->read(cpu->PC++);
-
-	return addrL + (addrH << 8) + cpu->X;
+	return (addrH << 8) + addrL + cpu->X;
 }
 
 uint16_t mos6502_AbsYIdxMode(MOS6502 *cpu)
 {
-	uint16_t addrL;
-	uint16_t addrH;
-
-	addrL = cpu->read(cpu->PC++);
-	addrH = cpu->read(cpu->PC++);
+	uint16_t addrL = cpu->read(cpu->PC++);
+	uint16_t addrH = cpu->read(cpu->PC++);
 
 	return addrL + (addrH << 8) + cpu->Y;
 }
 
 uint16_t mos6502_ZpgXIdxMode(MOS6502 *cpu)
 {
-	return (cpu->read(cpu->X++) + cpu->X) % 256;
+    uint16_t addrL = cpu->read(cpu->PC++);
+    return ZPG_H + addrL + cpu->X;
 }
 
 uint16_t mos6502_ZpgYIdxMode(MOS6502 *cpu)
 {
-	return (cpu->read(cpu->PC++) + cpu->Y) % 256;
+    uint16_t addrL = cpu->read(cpu->PC++);
+    return ZPG_H + addrL + cpu->Y;
 }
 
 void mos6502_reset(MOS6502 *cpu)
 {
-    cpu->A = cpu->X = cpu->Y = 0;
+    cpu->A = 0;
+    cpu->X = 0;
+    cpu->Y = 0;
+
     cpu->SP = 0xFF;
     cpu->P = B_Mask | I_Mask;
     cpu->PC = (cpu->read(RST_VectorH) << 8) + cpu->read(RST_VectorL);
-
-    cpu->instr_cycles = 7;
 }
 
 void mos6502_nmi(MOS6502 *cpu, uint8_t state)
 {
+    // Set Break flag
+    SET_B(0);
+
     // Push PC
-    cpu->write(SP_H + cpu->SP, cpu->PC >> 8);
+    cpu->write(SP_H + cpu->SP, (cpu->PC >> 8) & 0xFF);
     cpu->SP--;
-    cpu->write(SP_H + cpu->SP, (cpu->PC << 8) >> 8);
+
+    cpu->write(SP_H + cpu->SP, cpu->PC & 0xFF);
     cpu->SP--;
 
     // Push Processor Status Register
     cpu->write(SP_H + cpu->SP, cpu->P);
     cpu->SP--;
 
+    SET_I(1);
+
     // Read reset vector
     cpu->PC = (cpu->read(NMI_VectorH) << 8) + cpu->read(NMI_VectorL);
-
-    cpu->instr_cycles += 5;
 }
 
 void mos6502_irq(MOS6502 *cpu, uint8_t state)
 {
-    if (cpu->P & I_Mask)
+    if (IS_I)
     {
+        // Set Break flag
+        SET_B(0);
+
         // Push PC
-        cpu->write(SP_H + cpu->SP, cpu->PC >> 8);
+        cpu->write(SP_H + cpu->SP, (cpu->PC >> 8) & 0xFF);
         cpu->SP--;
-        cpu->write(SP_H + cpu->SP, (cpu->PC << 8) >> 8);
+
+        cpu->write(SP_H + cpu->SP, cpu->PC & 0xFF);
         cpu->SP--;
 
         // Push Processor Status Register
         cpu->write(SP_H + cpu->SP, cpu->P);
         cpu->SP--;
 
-        // Read reset vector
-        cpu->PC = (cpu->read(RST_VectorH) << 8) + cpu->read(RST_VectorL);
+        SET_I(1);
 
-        cpu->instr_cycles += 5;
+        // Read reset vector
+        cpu->PC = (cpu->read(IRQ_VectorH) << 8) + cpu->read(IRQ_VectorL);
     }
 }
 
@@ -579,7 +642,7 @@ void mos6502_CMP(MOS6502 *cpu, uint16_t src)
 
     SET_N(result & 0b10000000);
     SET_Z(!(result & 0xFF));
-    SET_C(result < 0x100);    // TODO: try to understand this flag
+    SET_C(result < 0x100);
 }
 
 void mos6502_CPX(MOS6502 *cpu, uint16_t src)
@@ -592,7 +655,7 @@ void mos6502_CPX(MOS6502 *cpu, uint16_t src)
 
     SET_N(result & 0b10000000);
     SET_Z(!(result & 0xFF));
-    SET_C(result < 0x100);    // TODO: try to understand this flag
+    SET_C(result < 0x100);
 }
 
 void mos6502_CPY(MOS6502 *cpu, uint16_t src)
@@ -605,7 +668,7 @@ void mos6502_CPY(MOS6502 *cpu, uint16_t src)
 
     SET_N(result & 0b10000000);
     SET_Z(!(result & 0xFF));
-    SET_C(result < 0x100);    // TODO: try to understand this flag
+    SET_C(result < 0x100);
 }
 
 void mos6502_DEC(MOS6502 *cpu, uint16_t src)
@@ -705,10 +768,10 @@ void mos6502_JSR(MOS6502 *cpu, uint16_t src)
     pc_hi = cpu->PC >> 8;
 
     cpu->SP++;
-    cpu->write(cpu->SP, pc_hi);
+    cpu->write(SP_H + cpu->SP, pc_hi);
 
     cpu->SP++;
-    cpu->write(cpu->SP, pc_lo);
+    cpu->write(SP_H + cpu->SP, pc_lo);
 
     cpu->PC = src;
 
@@ -796,7 +859,7 @@ void mos6502_PHA(MOS6502 *cpu, uint16_t src)
 {
     // push A              N	Z	C	I	D	V
     //                     -	-	-	-	-	-
-    cpu->write(cpu->SP, cpu->A);
+    cpu->write(SP_H + cpu->SP, cpu->A);
     cpu->SP--;
 }
 
@@ -811,9 +874,9 @@ void mos6502_PHP(MOS6502 *cpu, uint16_t src)
     uint8_t flags = cpu->P;
 
     flags |= B_Mask;
-    flags |= 0b00010000;
+    flags |= BIT5_Mask;
 
-    cpu->write(cpu->SP, flags);
+    cpu->write(SP_H + cpu->SP, flags);
     cpu->SP--;
 }
 
@@ -823,7 +886,7 @@ void mos6502_PLA(MOS6502 *cpu, uint16_t src)
     //                 +	+	-	-	-	-
 
     cpu->SP++;
-    cpu->A = cpu->read(cpu->SP);
+    cpu->A = cpu->read(SP_H + cpu->SP);
 
     SET_N(cpu->A & 0b10000000);
     SET_Z(!cpu->A);
@@ -839,13 +902,17 @@ void mos6502_PLP(MOS6502 *cpu, uint16_t src)
 
     // TODO: respect the note about B and bit 5
 
+    uint8_t old_P = cpu->P;
+
     cpu->SP++;
-    cpu->P = cpu->read(cpu->SP);
+    cpu->P = cpu->read(SP_H + cpu->SP);
+
+    (old_P & B_Mask) ? SET_B(1) : SET_B(0);
+    (old_P & BIT5_Mask) ? SET_5(1) : SET_5(0);
 }
 
 void mos6502_ROL(MOS6502 *cpu, uint16_t src)
 {
-    // TODO: ROL and ROL_ACC, don't use 16 bit ints
     // C <- [76543210] <- C            N	Z	C	I	D	V
     //                                 +	+	+	-	-	-
 
@@ -853,14 +920,14 @@ void mos6502_ROL(MOS6502 *cpu, uint16_t src)
     M <<= 1;
 
     if (IS_C)
-        M |= 0x00000001;
+        M |= 0b00000001;
 
     SET_C(M > 0xFF);
     M &= 0xFF;
     SET_N(M & 0b10000000);
     SET_Z(!M);
 
-    cpu->write(src, M);
+    cpu->write(src, (uint8_t) M);
 }
 
 void mos6502_ROL_AccMode(MOS6502 *cpu, uint16_t src)
@@ -878,45 +945,65 @@ void mos6502_ROL_AccMode(MOS6502 *cpu, uint16_t src)
     M &= 0xFF;
     SET_N(M & 0b10000000);
     SET_Z(!M);
-    cpu->A = M;
+    cpu->A = (uint8_t) M;
 }
 
 void mos6502_ROR(MOS6502 *cpu, uint16_t src)
 {
     // C -> [76543210] -> C            N	Z	C	I	D	V
     //                                 +	+	+	-	-	-
+
+    // Read value and shift it into high byte of M
     uint16_t M = cpu->read(src) << 8;
+
+    // Shift right one place, now the Carry Out is in the high bit of low byte
+    // And high bit of high byte is 1
     M >>= 1;
 
+    // Set the high bit of the top byte if Carry In
     if (IS_C)
-        M |= (0x10000000 << 8);
+        M |= (0b10000000 << 8);
 
+    // Use high bit of low byte to set new Carry Out
     SET_C(M & 0b10000000);
+
+    // Move shifted value back into low byte and zero out high byte
     M >>= 8;
     M &= 0xFF;
+
     SET_N(M & 0b10000000);
     SET_Z(!M);
 
-    cpu->write(src, M);
+    cpu->write(src, (uint8_t) M);
 }
 
 void mos6502_ROR_AccMode(MOS6502 *cpu, uint16_t src)
 {
     // C -> [76543210] -> C            N	Z	C	I	D	V
     //                                 +	+	+	-	-	-
+
+    // Read value and shift it into high byte of M
     uint16_t M = cpu->A << 8;
+
+    // Shift right one place, now the Carry Out is in the high bit of low byte
+    // And high bit of high byte is 1
     M >>= 1;
 
+    // Set the high bit of the top byte if Carry In
     if (IS_C)
-        M |= (0x10000000 << 8);
+        M |= (0b10000000 << 8);
 
+    // Use high bit of low byte to set new Carry Out
     SET_C(M & 0b10000000);
+
+    // Move shifted value back into low byte and zero out high byte
     M >>= 8;
     M &= 0xFF;
+
     SET_N(M & 0b10000000);
     SET_Z(!M);
 
-    cpu->A = M;
+    cpu->A = (uint8_t) M;
 }
 
 void mos6502_RTI(MOS6502 *cpu, uint16_t src)
@@ -931,13 +1018,13 @@ void mos6502_RTI(MOS6502 *cpu, uint16_t src)
     uint8_t pc_hi;
 
     cpu->SP++;
-    cpu->P = cpu->read(cpu->SP);
+    cpu->P = cpu->read(SP_H + cpu->SP);
 
     cpu->SP++;
-    pc_lo = cpu->read(cpu->SP);
+    pc_lo = cpu->read(SP_H + cpu->SP);
 
     cpu->SP++;
-    pc_hi = cpu->read(cpu->SP);
+    pc_hi = cpu->read(SP_H + cpu->SP);
 
     cpu->PC = (pc_hi << 8) | pc_lo;
 }
@@ -951,10 +1038,10 @@ void mos6502_RTS(MOS6502 *cpu, uint16_t src)
     uint8_t pc_hi;
 
     cpu->SP++;
-    pc_lo = cpu->read(cpu->SP);
+    pc_lo = cpu->read(SP_H + cpu->SP);
 
     cpu->SP++;
-    pc_hi = cpu->read(cpu->SP);
+    pc_hi = cpu->read(SP_H + cpu->SP);
 
     cpu->PC = (pc_hi << 8) | pc_lo;
 }
@@ -969,7 +1056,7 @@ void mos6502_SBC(MOS6502 *cpu, uint16_t src)
 
     SET_N(result & 0b10000000);
     SET_Z(!(result & 0xFF));
-    SET_C(result < 0x100);    // TODO: try to understand this flag
+    SET_C(result < 0x100);
     SET_V(!(((cpu->A ^ M) & 0b10000000) && ((cpu->A ^ result) & 0b10000000)));
 
     cpu->A = result & 0xFF;
