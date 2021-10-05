@@ -3,8 +3,6 @@
 
 #define Inst(opcode, amode, func) cpu->instructions[opcode].mode = &amode; cpu->instructions[opcode].ucode = &func
 
-// MOS 6502 Constructor - set up read and write callbacks, and fill instruction table
-// Caller must free pointer
 MOS6502 *mos6502(MemRead read, MemWrite write)
 {
     MOS6502 *cpu = malloc(sizeof(MOS6502));
@@ -13,6 +11,7 @@ MOS6502 *mos6502(MemRead read, MemWrite write)
 
     cpu->read = read;
     cpu->write = write;
+    cpu->instr_cycles = 0;
 
     _mos6502_build_instructions(cpu);
     return cpu;
@@ -20,6 +19,7 @@ MOS6502 *mos6502(MemRead read, MemWrite write)
 
 void mos6502_run(MOS6502 *cpu, uint64_t cycles)
 {
+    uint8_t opcode;
     Instruction inst;
     uint16_t src;
     uint64_t initial_cycles = cpu->instr_cycles;
@@ -27,7 +27,14 @@ void mos6502_run(MOS6502 *cpu, uint64_t cycles)
     while (cpu->instr_cycles < (initial_cycles + cycles))
     {
         // Fetch
-        inst = cpu->instructions[cpu->read(cpu->PC++)];
+        opcode = cpu->read(cpu->PC);
+
+        if (opcode == HLT_IMP)
+            break;
+
+        cpu->PC++;
+
+        inst = cpu->instructions[opcode];
 
         // Decode
         src = inst.mode(cpu);
@@ -35,12 +42,11 @@ void mos6502_run(MOS6502 *cpu, uint64_t cycles)
         // Execute
         inst.ucode(cpu, src);
 
-        // 1 Instruction complete
+        // Instruction complete
         cpu->instr_cycles++;
     }
 }
 
-// Fill instruction table with addressing mode and ucode functions
 void _mos6502_build_instructions(MOS6502 *cpu)
 {
     // Fill Instruction table with NOPs
@@ -421,17 +427,17 @@ uint16_t mos6502_AbsYIdxMode(MOS6502 *cpu)
 
 uint16_t mos6502_ZpgXIdxMode(MOS6502 *cpu)
 {
-    uint16_t addrL = cpu->read(cpu->PC++);
-    return ZPG_H + addrL + cpu->X;
+    uint16_t addrL = cpu->read(cpu->PC++) + cpu->X;
+    return ZPG_H + addrL;
 }
 
 uint16_t mos6502_ZpgYIdxMode(MOS6502 *cpu)
 {
-    uint16_t addrL = cpu->read(cpu->PC++);
-    return ZPG_H + addrL + cpu->Y;
+    uint16_t addrL = cpu->read(cpu->PC++) + cpu->Y;
+    return ZPG_H + addrL;
 }
 
-void mos6502_reset(MOS6502 *cpu)
+void mos6502_rst(MOS6502 *cpu)
 {
     cpu->A = 0;
     cpu->X = 0;
@@ -1037,11 +1043,11 @@ void mos6502_RTS(MOS6502 *cpu, uint16_t src)
     uint8_t pc_lo;
     uint8_t pc_hi;
 
-    cpu->SP++;
     pc_lo = cpu->read(SP_H + cpu->SP);
+    cpu->SP--;
 
-    cpu->SP++;
     pc_hi = cpu->read(SP_H + cpu->SP);
+    cpu->SP--;
 
     cpu->PC = (pc_hi << 8) | pc_lo;
 }

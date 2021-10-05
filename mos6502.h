@@ -70,7 +70,7 @@ struct _MOS6502
 };
 
 MOS6502 *mos6502(MemRead read, MemWrite write);
-void mos6502_reset(MOS6502 *cpu);
+void mos6502_rst(MOS6502 *cpu);
 void mos6502_nmi(MOS6502 *cpu, uint8_t state);
 void mos6502_irq(MOS6502 *cpu, uint8_t state);
 void mos6502_run(MOS6502 *cpu, uint64_t cycles);
@@ -422,4 +422,4 @@ void mos6502_TYA(MOS6502 *cpu, uint16_t src);
 // #define 0xCF
 // #define 0xDF
 // #define 0xEF
-// #define 0xFF
+#define HLT_IMP 0xFF  // NOTE: this is a custom opcode

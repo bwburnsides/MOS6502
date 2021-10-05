@@ -6,3 +6,5 @@ Debug/
 *.vcxproj
 *.filters
 *.user
+
+*.bin
