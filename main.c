@@ -6,8 +6,8 @@
 
 #include "mos6502.h"
 
-#define MEM_IMAGE "bubble.bin"
-#define MAX_INSTR_COUNT 1000
+#define MEM_IMAGE "fib.bin"
+#define MAX_INSTR_COUNT 100000
 #define ADDR_SPACE_SIZE 64 * 1024
 uint8_t memory[ADDR_SPACE_SIZE];
 
@@ -42,6 +42,13 @@ int main(int argc, char **argv)
     printf("Starting Emulator. Initial state of CPU:\n\n");
     print_cpu(cpu);
 
+    // for (int i = 0; i < MAX_INSTR_COUNT; i++)
+    // {
+    //     mos6502_run(cpu, 1);
+    //     print_cpu(cpu);
+    //     getchar();
+    // }
+
     mos6502_run(cpu, MAX_INSTR_COUNT);
 
     printf("\n----------------------------------\n");
@@ -55,7 +62,7 @@ int main(int argc, char **argv)
 void print_cpu(MOS6502 *cpu)
 {
     printf("Instructions: %d\n", cpu->instr_cycles);
-    printf("PC: $%04X\tSP: $%04X\n", cpu->PC, SP_H + cpu->SP);
+    printf("PC: $%04X\t\tIR: $%02X\t\tSP: $%04X\n", cpu->PC, cpu->IR, SP_H + cpu->SP);
     printf("\nStatus: %d  %d  %d  %d  %d  %d  %d  %d\n", IS_N, IS_V, IS_5, IS_B, IS_D, IS_I, IS_Z, IS_C);
     printf("        N  V  -  B  D  I  Z  C\n");
     printf("A: $%02X\n", cpu->A);

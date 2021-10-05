@@ -12,6 +12,7 @@ MOS6502 *mos6502(MemRead read, MemWrite write)
     cpu->read = read;
     cpu->write = write;
     cpu->instr_cycles = 0;
+    cpu->IR = NOP_IMP;
 
     _mos6502_build_instructions(cpu);
     return cpu;
@@ -19,7 +20,6 @@ MOS6502 *mos6502(MemRead read, MemWrite write)
 
 void mos6502_run(MOS6502 *cpu, uint64_t cycles)
 {
-    uint8_t opcode;
     Instruction inst;
     uint16_t src;
     uint64_t initial_cycles = cpu->instr_cycles;
@@ -27,14 +27,14 @@ void mos6502_run(MOS6502 *cpu, uint64_t cycles)
     while (cpu->instr_cycles < (initial_cycles + cycles))
     {
         // Fetch
-        opcode = cpu->read(cpu->PC);
+        cpu->IR = cpu->read(cpu->PC);
 
-        if (opcode == HLT_IMP)
+        if (cpu->IR == HLT_IMP)
             break;
 
         cpu->PC++;
 
-        inst = cpu->instructions[opcode];
+        inst = cpu->instructions[cpu->IR];
 
         // Decode
         src = inst.mode(cpu);
@@ -59,13 +59,13 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     // Fill actual instructions into table
 
     Inst(ADC_IMM,      mos6502_ImmMode, mos6502_ADC);
-    Inst(ADC_ZPG,      mos6502_ImmMode, mos6502_ADC);
-    Inst(ADC_ZPG_XIDX, mos6502_ImmMode, mos6502_ADC);
-    Inst(ADC_ABS,      mos6502_ImmMode, mos6502_ADC);
-    Inst(ADC_ABS_XIDX, mos6502_ImmMode, mos6502_ADC);
-    Inst(ADC_ABS_YIDX, mos6502_ImmMode, mos6502_ADC);
-    Inst(ADC_XIDX_IND, mos6502_ImmMode, mos6502_ADC);
-    Inst(ADC_IND_YIDX, mos6502_ImmMode, mos6502_ADC);
+    Inst(ADC_ZPG,      mos6502_ZpgMode, mos6502_ADC);
+    Inst(ADC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ADC);
+    Inst(ADC_ABS,      mos6502_AbsMode, mos6502_ADC);
+    Inst(ADC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ADC);
+    Inst(ADC_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_ADC);
+    Inst(ADC_XIDX_IND, mos6502_XIdxIndMode, mos6502_ADC);
+    Inst(ADC_IND_YIDX, mos6502_IndYIdxMode, mos6502_ADC);
 
     Inst(AND_IMM,      mos6502_ImmMode,     mos6502_AND);
     Inst(AND_ZPG,      mos6502_ZpgMode,     mos6502_AND);
@@ -771,13 +771,13 @@ void mos6502_JSR(MOS6502 *cpu, uint16_t src)
     cpu->PC--;
 
     pc_lo = cpu->PC & 0xFF;
-    pc_hi = cpu->PC >> 8;
+    pc_hi = (cpu->PC >> 8) & 0xFF;
 
-    cpu->SP++;
     cpu->write(SP_H + cpu->SP, pc_hi);
+    cpu->SP--;
 
-    cpu->SP++;
     cpu->write(SP_H + cpu->SP, pc_lo);
+    cpu->SP--;
 
     cpu->PC = src;
 
@@ -1043,11 +1043,11 @@ void mos6502_RTS(MOS6502 *cpu, uint16_t src)
     uint8_t pc_lo;
     uint8_t pc_hi;
 
+    cpu->SP++;
     pc_lo = cpu->read(SP_H + cpu->SP);
-    cpu->SP--;
 
+    cpu->SP++;
     pc_hi = cpu->read(SP_H + cpu->SP);
-    cpu->SP--;
 
     cpu->PC = (pc_hi << 8) | pc_lo;
 }

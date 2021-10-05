@@ -62,6 +62,7 @@ struct _MOS6502
     uint8_t P;
     uint8_t SP;
     uint16_t PC;
+    uint8_t IR;
 
     uint8_t nmi;
     uint8_t irq;
