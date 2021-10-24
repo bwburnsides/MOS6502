@@ -6,8 +6,13 @@
 
 #include "mos6502.h"
 
+#define RED_TXT "\033[0;31m"
+#define GREEN_TXT "\033[0;32m"
+#define RESET_TXT "\033[0m"
+
 #define MEM_IMAGE "fib.bin"
 #define MAX_INSTR_COUNT 100000
+
 #define ADDR_SPACE_SIZE 64 * 1024
 uint8_t memory[ADDR_SPACE_SIZE];
 
@@ -15,12 +20,26 @@ uint8_t DebugBusRead(uint16_t addr);
 void DebugBusWrite(uint16_t addr, uint8_t data);
 void print_cpu(MOS6502 *cpu);
 
+#define STATE_FMT "|---------------------------------------------------------------------|\n"\
+                  "| Instructions Executed: %29d | Code | Stack |\n"\
+                  "|------------------------------------------------------|------|-------|\n"\
+                  "| Status: %sN%s %sV%s - %sB%s %sD%s %sI%s %sZ%s %sC%s                              |      |       |\n"\
+                  "| PC:    $%04X                                         |      |       |\n"\
+                  "| SP:    $%04X                                         |      |       |\n"\
+                  "| A:     $%02X                                           |      |       |\n"\
+                  "| X:     $%02X                                           |      |       |\n"\
+                  "| Y:     $%02X                                           |      |       |\n"\
+                  "|------------------------------------------------------|      |       |\n"\
+                  "| Zeropage:                                            |      |       |\n"\
+                  "%s"\
+                  "|------------------------------------------------------|------|-------|\n"
 
 int main(int argc, char **argv)
 {
     MOS6502 *cpu;
     FILE *fp;
     size_t num_bytes;
+    int cpu_run_rv = 0;
 
     cpu = mos6502(DebugBusRead, DebugBusWrite);
     if (cpu == NULL)
@@ -38,22 +57,14 @@ int main(int argc, char **argv)
 
     mos6502_rst(cpu);
 
-    printf("----------------------------------\n");
-    printf("Starting Emulator. Initial state of CPU:\n\n");
-    print_cpu(cpu);
+    for (int i = 0; i < MAX_INSTR_COUNT && !(cpu_run_rv); i++)
+    {
+        if (i)
+            printf("\033[0;0H");
 
-    // for (int i = 0; i < MAX_INSTR_COUNT; i++)
-    // {
-    //     mos6502_run(cpu, 1);
-    //     print_cpu(cpu);
-    //     getchar();
-    // }
-
-    mos6502_run(cpu, MAX_INSTR_COUNT);
-
-    printf("\n----------------------------------\n");
-    printf("\nFinal state of CPU:\n\n");
-    print_cpu(cpu);
+        cpu_run_rv = mos6502_run(cpu, 1);
+        print_cpu(cpu);
+    }
 
     free(cpu);
     return 0;
@@ -61,22 +72,38 @@ int main(int argc, char **argv)
 
 void print_cpu(MOS6502 *cpu)
 {
-    printf("Instructions: %d\n", cpu->instr_cycles);
-    printf("PC: $%04X\t\tIR: $%02X\t\tSP: $%04X\n", cpu->PC, cpu->IR, SP_H + cpu->SP);
-    printf("\nStatus: %d  %d  %d  %d  %d  %d  %d  %d\n", IS_N, IS_V, IS_5, IS_B, IS_D, IS_I, IS_Z, IS_C);
-    printf("        N  V  -  B  D  I  Z  C\n");
-    printf("A: $%02X\n", cpu->A);
-    printf("X: $%02X\n", cpu->X);
-    printf("Y: $%02X\n", cpu->Y);
-
-    printf("\nZeropage:\n");
-    for (int i = 0; i < 256; i += 16)
+    char zpg_str[913];
+    int cursor;
+    for (int i = 0; i < 16; i++)
     {
-        printf("$%02X: ", i);
+        cursor = i * 57;
+        cursor += sprintf(zpg_str + cursor, "| $%02X:", i * 16);
+
         for (int j = 0; j < 16; j++)
-            printf("%02X ", memory[(ZPG_H + i) + j]);
-        printf("\n");
+        {
+            cursor += sprintf(zpg_str + cursor, " %02X", memory[(ZPG_H + (i * 16)) + j]);
+        }
+
+        sprintf(zpg_str + cursor, " |\n");
     }
+
+    printf(
+        STATE_FMT,
+        cpu->instr_cycles,
+        IS_N ? GREEN_TXT : RED_TXT, RESET_TXT,
+        IS_V ? GREEN_TXT : RED_TXT, RESET_TXT,
+        IS_B ? GREEN_TXT : RED_TXT, RESET_TXT,
+        IS_D ? GREEN_TXT : RED_TXT, RESET_TXT,
+        IS_I ? GREEN_TXT : RED_TXT, RESET_TXT,
+        IS_Z ? GREEN_TXT : RED_TXT, RESET_TXT,
+        IS_C ? GREEN_TXT : RED_TXT, RESET_TXT,
+        cpu->PC,
+        SP_H + cpu->SP,
+        cpu->A,
+        cpu->X,
+        cpu->Y,
+        zpg_str
+    );
 }
 
 uint8_t DebugBusRead(uint16_t addr)

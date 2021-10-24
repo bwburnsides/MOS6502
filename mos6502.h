@@ -1,3 +1,6 @@
+#ifndef MOS6502_H
+#define MOS6502_H
+
 #include <inttypes.h>
 
 #define C_Mask ((uint8_t) 0x01)     // 0b00000001
@@ -49,9 +52,12 @@ typedef struct _Instruction
     InstUcode ucode;
 } Instruction;
 
+int _INITIALIZED;
+Instruction instructions[256];
+
 struct _MOS6502
 {
-    uint64_t instr_cycles;
+    int instr_cycles;
 
     MemRead read;
     MemWrite write;
@@ -66,17 +72,15 @@ struct _MOS6502
 
     uint8_t nmi;
     uint8_t irq;
-
-    Instruction instructions[256];
 };
 
 MOS6502 *mos6502(MemRead read, MemWrite write);
 void mos6502_rst(MOS6502 *cpu);
 void mos6502_nmi(MOS6502 *cpu, uint8_t state);
 void mos6502_irq(MOS6502 *cpu, uint8_t state);
-void mos6502_run(MOS6502 *cpu, uint64_t cycles);
+int mos6502_run(MOS6502 *cpu, uint64_t cycles);
 
-void _mos6502_build_instructions(MOS6502 *cpu);
+void _mos6502_build_instructions();
 
 uint16_t mos6502_AccMode(MOS6502 *cpu);
 uint16_t mos6502_AbsMode(MOS6502 *cpu);
@@ -424,3 +428,5 @@ void mos6502_TYA(MOS6502 *cpu, uint16_t src);
 // #define 0xDF
 // #define 0xEF
 #define HLT_IMP 0xFF  // NOTE: this is a custom opcode
+
+#endif // MOS6502_H

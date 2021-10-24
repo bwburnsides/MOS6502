@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include "mos6502.h"
 
-#define Inst(opcode, amode, func) cpu->instructions[opcode].mode = &amode; cpu->instructions[opcode].ucode = &func
+#define Inst(opcode, amode, func) instructions[(opcode)].mode = &(amode); instructions[(opcode)].ucode = &(func)
+
+_INITIALIZED = 0;
 
 MOS6502 *mos6502(MemRead read, MemWrite write)
 {
@@ -14,11 +16,11 @@ MOS6502 *mos6502(MemRead read, MemWrite write)
     cpu->instr_cycles = 0;
     cpu->IR = NOP_IMP;
 
-    _mos6502_build_instructions(cpu);
+    _mos6502_build_instructions();
     return cpu;
 }
 
-void mos6502_run(MOS6502 *cpu, uint64_t cycles)
+int mos6502_run(MOS6502 *cpu, uint64_t cycles)
 {
     Instruction inst;
     uint16_t src;
@@ -30,11 +32,11 @@ void mos6502_run(MOS6502 *cpu, uint64_t cycles)
         cpu->IR = cpu->read(cpu->PC);
 
         if (cpu->IR == HLT_IMP)
-            break;
+            return -1;
 
         cpu->PC++;
 
-        inst = cpu->instructions[cpu->IR];
+        inst = instructions[cpu->IR];
 
         // Decode
         src = inst.mode(cpu);
@@ -45,23 +47,28 @@ void mos6502_run(MOS6502 *cpu, uint64_t cycles)
         // Instruction complete
         cpu->instr_cycles++;
     }
+
+    return 0;
 }
 
-void _mos6502_build_instructions(MOS6502 *cpu)
+void _mos6502_build_instructions()
 {
+    if (_INITIALIZED)
+        return;
+
     // Fill Instruction table with NOPs
     for (int i = 0; i < 256; i++)
     {
-        cpu->instructions[i].mode = &mos6502_ImpMode;
-        cpu->instructions[i].ucode = &mos6502_NOP;
+        instructions[i].mode = &mos6502_ImpMode;
+        instructions[i].ucode = &mos6502_NOP;
     }
 
     // Fill actual instructions into table
 
-    Inst(ADC_IMM,      mos6502_ImmMode, mos6502_ADC);
-    Inst(ADC_ZPG,      mos6502_ZpgMode, mos6502_ADC);
+    Inst(ADC_IMM,      mos6502_ImmMode,     mos6502_ADC);
+    Inst(ADC_ZPG,      mos6502_ZpgMode,     mos6502_ADC);
     Inst(ADC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ADC);
-    Inst(ADC_ABS,      mos6502_AbsMode, mos6502_ADC);
+    Inst(ADC_ABS,      mos6502_AbsMode,     mos6502_ADC);
     Inst(ADC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ADC);
     Inst(ADC_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_ADC);
     Inst(ADC_XIDX_IND, mos6502_XIdxIndMode, mos6502_ADC);
@@ -82,34 +89,34 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     Inst(ASL_ABS,      mos6502_AbsMode,     mos6502_ASL);
     Inst(ASL_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ASL);
 
-    Inst(BCC_REL, mos6502_RelMode, mos6502_BCC);
+    Inst(BCC_REL,      mos6502_RelMode,     mos6502_BCC);
 
-    Inst(BCS_REL, mos6502_RelMode, mos6502_BCS);
+    Inst(BCS_REL,      mos6502_RelMode,     mos6502_BCS);
 
-    Inst(BEQ_REL, mos6502_RelMode, mos6502_BEQ);
+    Inst(BEQ_REL,      mos6502_RelMode,     mos6502_BEQ);
 
-    Inst(BIT_ZPG, mos6502_ZpgMode, mos6502_BIT);
-    Inst(BIT_ABS, mos6502_AbsMode, mos6502_BIT);
+    Inst(BIT_ZPG,      mos6502_ZpgMode,     mos6502_BIT);
+    Inst(BIT_ABS,      mos6502_AbsMode,     mos6502_BIT);
 
-    Inst(BMI_REL, mos6502_RelMode, mos6502_BMI);
+    Inst(BMI_REL,      mos6502_RelMode,     mos6502_BMI);
 
-    Inst(BNE_REL, mos6502_RelMode, mos6502_BNE);
+    Inst(BNE_REL,      mos6502_RelMode,     mos6502_BNE);
 
-    Inst(BPL_REL, mos6502_RelMode, mos6502_BPL);
+    Inst(BPL_REL,      mos6502_RelMode,     mos6502_BPL);
 
-    Inst(BRK_IMP, mos6502_ImpMode, mos6502_BRK);
+    Inst(BRK_IMP,      mos6502_ImpMode,     mos6502_BRK);
 
-    Inst(BVC_REL, mos6502_RelMode, mos6502_BVC);
+    Inst(BVC_REL,      mos6502_RelMode,     mos6502_BVC);
 
-    Inst(BVS_REL, mos6502_RelMode, mos6502_BVS);
+    Inst(BVS_REL,      mos6502_RelMode,     mos6502_BVS);
 
-    Inst(CLC_IMP, mos6502_ImpMode, mos6502_CLC);
+    Inst(CLC_IMP,      mos6502_ImpMode,     mos6502_CLC);
 
-    Inst(CLD_IMP, mos6502_ImpMode, mos6502_CLD);
+    Inst(CLD_IMP,      mos6502_ImpMode,     mos6502_CLD);
 
-    Inst(CLI_IMP, mos6502_ImpMode, mos6502_CLI);
+    Inst(CLI_IMP,      mos6502_ImpMode,     mos6502_CLI);
 
-    Inst(CLV_IMP, mos6502_ImpMode, mos6502_CLV);
+    Inst(CLV_IMP,      mos6502_ImpMode,     mos6502_CLV);
 
     Inst(CMP_IMM,      mos6502_ImmMode,     mos6502_CMP);
     Inst(CMP_ZPG,      mos6502_ZpgMode,     mos6502_CMP);
@@ -120,22 +127,22 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     Inst(CMP_XIDX_IND, mos6502_XIdxIndMode, mos6502_CMP);
     Inst(CMP_IND_YIDX, mos6502_IndYIdxMode, mos6502_CMP);
 
-    Inst(CPX_IMM, mos6502_ImmMode, mos6502_CPX);
-    Inst(CPX_ZPG, mos6502_ZpgMode, mos6502_CPX);
-    Inst(CPX_ABS, mos6502_AbsMode, mos6502_CPX);
+    Inst(CPX_IMM,      mos6502_ImmMode,     mos6502_CPX);
+    Inst(CPX_ZPG,      mos6502_ZpgMode,     mos6502_CPX);
+    Inst(CPX_ABS,      mos6502_AbsMode,     mos6502_CPX);
 
-    Inst(CPY_IMM, mos6502_ImmMode, mos6502_CPY);
-    Inst(CPY_ZPG, mos6502_ZpgMode, mos6502_CPY);
-    Inst(CPY_ABS, mos6502_AbsMode, mos6502_CPY);
+    Inst(CPY_IMM,      mos6502_ImmMode,     mos6502_CPY);
+    Inst(CPY_ZPG,      mos6502_ZpgMode,     mos6502_CPY);
+    Inst(CPY_ABS,      mos6502_AbsMode,     mos6502_CPY);
 
     Inst(DEC_ZPG,      mos6502_ZpgMode,     mos6502_DEC);
     Inst(DEC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_DEC);
     Inst(DEC_ABS,      mos6502_AbsMode,     mos6502_DEC);
     Inst(DEC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_DEC);
 
-    Inst(DEX_IMP, mos6502_ImpMode, mos6502_DEX);
+    Inst(DEX_IMP,      mos6502_ImpMode,     mos6502_DEX);
 
-    Inst(DEY_IMP, mos6502_ImpMode, mos6502_DEY);
+    Inst(DEY_IMP,      mos6502_ImpMode,     mos6502_DEY);
 
     Inst(EOR_IMM,      mos6502_ImmMode,     mos6502_EOR);
     Inst(EOR_ZPG,      mos6502_ZpgMode,     mos6502_EOR);
@@ -151,14 +158,14 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     Inst(INC_ABS,      mos6502_AbsMode,     mos6502_INC);
     Inst(INC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_INC);
 
-    Inst(INX_IMP, mos6502_ImpMode, mos6502_INX);
+    Inst(INX_IMP,      mos6502_ImpMode,     mos6502_INX);
 
-    Inst(INY_IMP, mos6502_ImpMode, mos6502_INY);
+    Inst(INY_IMP,      mos6502_ImpMode,     mos6502_INY);
 
-    Inst(JMP_ABS, mos6502_AbsMode, mos6502_JMP);
-    Inst(JMP_IND, mos6502_IndMode, mos6502_JMP);
+    Inst(JMP_ABS,      mos6502_AbsMode,     mos6502_JMP);
+    Inst(JMP_IND,      mos6502_IndMode,     mos6502_JMP);
 
-    Inst(JSR_ABS, mos6502_AbsMode, mos6502_JSR);
+    Inst(JSR_ABS,      mos6502_AbsMode,     mos6502_JSR);
 
     Inst(LDA_IMM,      mos6502_ImmMode,     mos6502_LDA);
     Inst(LDA_ZPG,      mos6502_ZpgMode,     mos6502_LDA);
@@ -187,7 +194,7 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     Inst(LSR_ABS,      mos6502_AbsMode,     mos6502_LSR);
     Inst(LSR_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_LSR);
 
-    Inst(NOP_IMP, mos6502_ImpMode, mos6502_NOP);
+    Inst(NOP_IMP,      mos6502_ImpMode,     mos6502_NOP);
 
     Inst(ORA_IMM,      mos6502_ImmMode,     mos6502_ORA);
     Inst(ORA_ZPG,      mos6502_ZpgMode,     mos6502_ORA);
@@ -198,13 +205,13 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     Inst(ORA_XIDX_IND, mos6502_XIdxIndMode, mos6502_ORA);
     Inst(ORA_IND_YIDX, mos6502_IndYIdxMode, mos6502_ORA);
 
-    Inst(PHA_IMP, mos6502_ImpMode, mos6502_PHA);
+    Inst(PHA_IMP,      mos6502_ImpMode,     mos6502_PHA);
 
-    Inst(PHP_IMP, mos6502_ImpMode, mos6502_PHP);
+    Inst(PHP_IMP,      mos6502_ImpMode,     mos6502_PHP);
 
-    Inst(PLA_IMP, mos6502_ImpMode, mos6502_PLA);
+    Inst(PLA_IMP,      mos6502_ImpMode,     mos6502_PLA);
 
-    Inst(PLP_IMP, mos6502_ImpMode, mos6502_PLP);
+    Inst(PLP_IMP,      mos6502_ImpMode,     mos6502_PLP);
 
     Inst(ROL_ACC,      mos6502_AccMode,     mos6502_ROL_AccMode);
     Inst(ROL_ZPG,      mos6502_ZpgMode,     mos6502_ROL);
@@ -218,9 +225,9 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     Inst(ROR_ABS,      mos6502_AbsMode,     mos6502_ROR);
     Inst(ROR_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ROR);
 
-    Inst(RTI_IMP, mos6502_ImpMode, mos6502_RTI);
+    Inst(RTI_IMP,      mos6502_ImpMode,     mos6502_RTI);
 
-    Inst(RTS_IMP, mos6502_ImpMode, mos6502_RTS);
+    Inst(RTS_IMP,      mos6502_ImpMode,     mos6502_RTS);
 
     Inst(SBC_IMM,      mos6502_ImmMode,     mos6502_SBC);
     Inst(SBC_ZPG,      mos6502_ZpgMode,     mos6502_SBC);
@@ -231,11 +238,11 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     Inst(SBC_XIDX_IND, mos6502_XIdxIndMode, mos6502_SBC);
     Inst(SBC_IND_YIDX, mos6502_IndYIdxMode, mos6502_SBC);
 
-    Inst(SEC_IMP, mos6502_ImpMode, mos6502_SEC);
+    Inst(SEC_IMP,      mos6502_ImpMode,     mos6502_SEC);
 
-    Inst(SED_IMP, mos6502_ImpMode, mos6502_SED);
+    Inst(SED_IMP,      mos6502_ImpMode,     mos6502_SED);
 
-    Inst(SEI_IMP, mos6502_ImpMode, mos6502_SEI);
+    Inst(SEI_IMP,      mos6502_ImpMode,     mos6502_SEI);
 
     Inst(STA_ZPG,      mos6502_ZpgMode,     mos6502_STA);
     Inst(STA_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_STA);
@@ -253,17 +260,19 @@ void _mos6502_build_instructions(MOS6502 *cpu)
     Inst(STY_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_STY);
     Inst(STY_ABS,      mos6502_AbsMode,     mos6502_STY);
 
-    Inst(TAX_IMP, mos6502_ImpMode, mos6502_TAX);
+    Inst(TAX_IMP,      mos6502_ImpMode,     mos6502_TAX);
 
-    Inst(TAY_IMP, mos6502_ImpMode, mos6502_TAY);
+    Inst(TAY_IMP,      mos6502_ImpMode,     mos6502_TAY);
 
-    Inst(TSX_IMP, mos6502_ImpMode, mos6502_TSX);
+    Inst(TSX_IMP,      mos6502_ImpMode,     mos6502_TSX);
 
-    Inst(TXA_IMP, mos6502_ImpMode, mos6502_TXA);
+    Inst(TXA_IMP,      mos6502_ImpMode,     mos6502_TXA);
 
-    Inst(TXS_IMP, mos6502_ImpMode, mos6502_TXS);
+    Inst(TXS_IMP,      mos6502_ImpMode,     mos6502_TXS);
 
-    Inst(TYA_IMP, mos6502_ImpMode, mos6502_TYA);
+    Inst(TYA_IMP,      mos6502_ImpMode,     mos6502_TYA);
+
+    _INITIALIZED = 1;
 }
 
 uint16_t mos6502_AccMode(MOS6502 *cpu)
