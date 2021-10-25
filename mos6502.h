@@ -40,6 +40,39 @@
 #define SP_H ((uint16_t) 0x0100)
 #define ZPG_H ((uint16_t) 0x0000)
 
+#define RED_TXT "\033[0;31m"
+#define GREEN_TXT "\033[0;32m"
+#define RESET_TXT "\033[0m"
+#define STATE_FMT "\033[1;1H"\
+"+------------------------------------------------------+----------------------+-----------+\n"\
+"| Instructions Executed: %29d | Program              | Stack     |\n"\
+"+------------------------------------------------------+----------------------+-----------+\n"\
+"| Status: %sN %sV \033[0m- %sB %sD %sI %sZ %sC%-32s  | %-20s | %-9s |\n"\
+"| PC:    $%04X                                         | %-20s | %-9s |\n"\
+"| SP:    $%04X                                         | %-20s | %-9s |\n"\
+"| A:     $%02X                                           | %-20s | %-9s |\n"\
+"| X:     $%02X                                           | %-20s | %-9s |\n"\
+"| Y:     $%02X                                           | %-20s | %-9s |\n"\
+"+------------------------------------------------------+ %-20s | %-9s |\n"\
+"| Zeropage:                                            | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"| %s | %-20s | %-9s |\n"\
+"+------------------------------------------------------+----------------------+-----------+\n"
+
 typedef struct _MOS6502 MOS6502;
 typedef uint8_t (* MemRead)(uint16_t addr);
 typedef void (* MemWrite)(uint16_t addr, uint8_t data);
@@ -50,6 +83,7 @@ typedef struct _Instruction
 {
     AddrMode mode;
     InstUcode ucode;
+    char *mnemonic;
 } Instruction;
 
 int _INITIALIZED;
@@ -79,7 +113,12 @@ void mos6502_rst(MOS6502 *cpu);
 void mos6502_nmi(MOS6502 *cpu, uint8_t state);
 void mos6502_irq(MOS6502 *cpu, uint8_t state);
 int mos6502_run(MOS6502 *cpu, uint64_t cycles);
+void mos6502_disassemble(MOS6502 *cpu, uint16_t count, uint16_t start_addr, uint16_t **addrs, char ***assembly);
+void mos6502_print(MOS6502 *cpu);
 
+void _mos6502_build_zpg_rows(MOS6502 *cpu, char ***rows);
+void _mos6502_build_prog_rows(MOS6502 *cpu, char ***rows);
+void _mos6502_build_stack_rows(MOS6502 *cpu, char ***rows);
 void _mos6502_build_instructions();
 
 uint16_t mos6502_AccMode(MOS6502 *cpu);

@@ -2,9 +2,18 @@
 Debug/
 .vscode/
 
+*.exe
+
 *.sln
 *.vcxproj
 *.filters
 *.user
 
 *.bin
+
+*.tlog
+*.pdb
+*.obj
+*.log
+*.ipdb
+*iobj

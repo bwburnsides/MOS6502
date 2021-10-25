@@ -1,7 +1,11 @@
+#define _CRT_SECURE_NO_DEPRECATE  // MSVC won't compile fopen or fscanf usage without
 #include <stdlib.h>
+#include <stdio.h>
 #include "mos6502.h"
 
-#define Inst(opcode, amode, func) instructions[(opcode)].mode = &(amode); instructions[(opcode)].ucode = &(func)
+#define Inst(opcode, amode, func, name) instructions[(opcode)].mode = &(amode);\
+                                        instructions[(opcode)].ucode = &(func);\
+                                        instructions[(opcode)].mnemonic = (name);
 
 _INITIALIZED = 0;
 
@@ -61,216 +65,219 @@ void _mos6502_build_instructions()
     {
         instructions[i].mode = &mos6502_ImpMode;
         instructions[i].ucode = &mos6502_NOP;
+        instructions[i].mnemonic = "NOP";
     }
 
     // Fill actual instructions into table
 
-    Inst(ADC_IMM,      mos6502_ImmMode,     mos6502_ADC);
-    Inst(ADC_ZPG,      mos6502_ZpgMode,     mos6502_ADC);
-    Inst(ADC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ADC);
-    Inst(ADC_ABS,      mos6502_AbsMode,     mos6502_ADC);
-    Inst(ADC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ADC);
-    Inst(ADC_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_ADC);
-    Inst(ADC_XIDX_IND, mos6502_XIdxIndMode, mos6502_ADC);
-    Inst(ADC_IND_YIDX, mos6502_IndYIdxMode, mos6502_ADC);
+    Inst(ADC_IMM,      mos6502_ImmMode,     mos6502_ADC, "ADC");
+    Inst(ADC_ZPG,      mos6502_ZpgMode,     mos6502_ADC, "ADC");
+    Inst(ADC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ADC, "ADC");
+    Inst(ADC_ABS,      mos6502_AbsMode,     mos6502_ADC, "ADC");
+    Inst(ADC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ADC, "ADC");
+    Inst(ADC_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_ADC, "ADC");
+    Inst(ADC_XIDX_IND, mos6502_XIdxIndMode, mos6502_ADC, "ADC");
+    Inst(ADC_IND_YIDX, mos6502_IndYIdxMode, mos6502_ADC, "ADC");
 
-    Inst(AND_IMM,      mos6502_ImmMode,     mos6502_AND);
-    Inst(AND_ZPG,      mos6502_ZpgMode,     mos6502_AND);
-    Inst(AND_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_AND);
-    Inst(AND_ABS,      mos6502_AbsMode,     mos6502_AND);
-    Inst(AND_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_AND);
-    Inst(AND_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_AND);
-    Inst(AND_XIDX_IND, mos6502_XIdxIndMode, mos6502_AND);
-    Inst(AND_IND_YIDX, mos6502_IndYIdxMode, mos6502_AND);
+    Inst(AND_IMM,      mos6502_ImmMode,     mos6502_AND, "AND");
+    Inst(AND_ZPG,      mos6502_ZpgMode,     mos6502_AND, "AND");
+    Inst(AND_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_AND, "AND");
+    Inst(AND_ABS,      mos6502_AbsMode,     mos6502_AND, "AND");
+    Inst(AND_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_AND, "AND");
+    Inst(AND_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_AND, "AND");
+    Inst(AND_XIDX_IND, mos6502_XIdxIndMode, mos6502_AND, "AND");
+    Inst(AND_IND_YIDX, mos6502_IndYIdxMode, mos6502_AND, "AND");
 
-    Inst(ASL_ACC,      mos6502_AccMode,     mos6502_ASL_AccMode);
-    Inst(ASL_ZPG,      mos6502_ZpgMode,     mos6502_ASL);
-    Inst(ASL_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ASL);
-    Inst(ASL_ABS,      mos6502_AbsMode,     mos6502_ASL);
-    Inst(ASL_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ASL);
+    Inst(ASL_ACC,      mos6502_AccMode,     mos6502_ASL_AccMode, "ASL");
+    Inst(ASL_ZPG,      mos6502_ZpgMode,     mos6502_ASL, "ASL");
+    Inst(ASL_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ASL, "ASL");
+    Inst(ASL_ABS,      mos6502_AbsMode,     mos6502_ASL, "ASL");
+    Inst(ASL_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ASL, "ASL");
 
-    Inst(BCC_REL,      mos6502_RelMode,     mos6502_BCC);
+    Inst(BCC_REL,      mos6502_RelMode,     mos6502_BCC, "BCC");
 
-    Inst(BCS_REL,      mos6502_RelMode,     mos6502_BCS);
+    Inst(BCS_REL,      mos6502_RelMode,     mos6502_BCS, "BCS");
 
-    Inst(BEQ_REL,      mos6502_RelMode,     mos6502_BEQ);
+    Inst(BEQ_REL,      mos6502_RelMode,     mos6502_BEQ, "BEQ");
 
-    Inst(BIT_ZPG,      mos6502_ZpgMode,     mos6502_BIT);
-    Inst(BIT_ABS,      mos6502_AbsMode,     mos6502_BIT);
+    Inst(BIT_ZPG,      mos6502_ZpgMode,     mos6502_BIT, "BIT");
+    Inst(BIT_ABS,      mos6502_AbsMode,     mos6502_BIT, "BIT");
 
-    Inst(BMI_REL,      mos6502_RelMode,     mos6502_BMI);
+    Inst(BMI_REL,      mos6502_RelMode,     mos6502_BMI, "BMI");
 
-    Inst(BNE_REL,      mos6502_RelMode,     mos6502_BNE);
+    Inst(BNE_REL,      mos6502_RelMode,     mos6502_BNE, "BNE");
 
-    Inst(BPL_REL,      mos6502_RelMode,     mos6502_BPL);
+    Inst(BPL_REL,      mos6502_RelMode,     mos6502_BPL, "BPL");
 
-    Inst(BRK_IMP,      mos6502_ImpMode,     mos6502_BRK);
+    Inst(BRK_IMP,      mos6502_ImpMode,     mos6502_BRK, "BRK");
 
-    Inst(BVC_REL,      mos6502_RelMode,     mos6502_BVC);
+    Inst(BVC_REL,      mos6502_RelMode,     mos6502_BVC, "BVC");
 
-    Inst(BVS_REL,      mos6502_RelMode,     mos6502_BVS);
+    Inst(BVS_REL,      mos6502_RelMode,     mos6502_BVS, "BVS");
 
-    Inst(CLC_IMP,      mos6502_ImpMode,     mos6502_CLC);
+    Inst(CLC_IMP,      mos6502_ImpMode,     mos6502_CLC, "CLC");
 
-    Inst(CLD_IMP,      mos6502_ImpMode,     mos6502_CLD);
+    Inst(CLD_IMP,      mos6502_ImpMode,     mos6502_CLD, "CLD");
 
-    Inst(CLI_IMP,      mos6502_ImpMode,     mos6502_CLI);
+    Inst(CLI_IMP,      mos6502_ImpMode,     mos6502_CLI, "CLI");
 
-    Inst(CLV_IMP,      mos6502_ImpMode,     mos6502_CLV);
+    Inst(CLV_IMP,      mos6502_ImpMode,     mos6502_CLV, "CLV");
 
-    Inst(CMP_IMM,      mos6502_ImmMode,     mos6502_CMP);
-    Inst(CMP_ZPG,      mos6502_ZpgMode,     mos6502_CMP);
-    Inst(CMP_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_CMP);
-    Inst(CMP_ABS,      mos6502_AbsMode,     mos6502_CMP);
-    Inst(CMP_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_CMP);
-    Inst(CMP_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_CMP);
-    Inst(CMP_XIDX_IND, mos6502_XIdxIndMode, mos6502_CMP);
-    Inst(CMP_IND_YIDX, mos6502_IndYIdxMode, mos6502_CMP);
+    Inst(CMP_IMM,      mos6502_ImmMode,     mos6502_CMP, "CMP");
+    Inst(CMP_ZPG,      mos6502_ZpgMode,     mos6502_CMP, "CMP");
+    Inst(CMP_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_CMP, "CMP");
+    Inst(CMP_ABS,      mos6502_AbsMode,     mos6502_CMP, "CMP");
+    Inst(CMP_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_CMP, "CMP");
+    Inst(CMP_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_CMP, "CMP");
+    Inst(CMP_XIDX_IND, mos6502_XIdxIndMode, mos6502_CMP, "CMP");
+    Inst(CMP_IND_YIDX, mos6502_IndYIdxMode, mos6502_CMP, "CMP");
 
-    Inst(CPX_IMM,      mos6502_ImmMode,     mos6502_CPX);
-    Inst(CPX_ZPG,      mos6502_ZpgMode,     mos6502_CPX);
-    Inst(CPX_ABS,      mos6502_AbsMode,     mos6502_CPX);
+    Inst(CPX_IMM,      mos6502_ImmMode,     mos6502_CPX, "CPX");
+    Inst(CPX_ZPG,      mos6502_ZpgMode,     mos6502_CPX, "CPX");
+    Inst(CPX_ABS,      mos6502_AbsMode,     mos6502_CPX, "CPX");
 
-    Inst(CPY_IMM,      mos6502_ImmMode,     mos6502_CPY);
-    Inst(CPY_ZPG,      mos6502_ZpgMode,     mos6502_CPY);
-    Inst(CPY_ABS,      mos6502_AbsMode,     mos6502_CPY);
+    Inst(CPY_IMM,      mos6502_ImmMode,     mos6502_CPY, "CPY");
+    Inst(CPY_ZPG,      mos6502_ZpgMode,     mos6502_CPY, "CPY");
+    Inst(CPY_ABS,      mos6502_AbsMode,     mos6502_CPY, "CPY");
 
-    Inst(DEC_ZPG,      mos6502_ZpgMode,     mos6502_DEC);
-    Inst(DEC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_DEC);
-    Inst(DEC_ABS,      mos6502_AbsMode,     mos6502_DEC);
-    Inst(DEC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_DEC);
+    Inst(DEC_ZPG,      mos6502_ZpgMode,     mos6502_DEC, "DEC");
+    Inst(DEC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_DEC, "DEC");
+    Inst(DEC_ABS,      mos6502_AbsMode,     mos6502_DEC, "DEC");
+    Inst(DEC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_DEC, "DEC");
 
-    Inst(DEX_IMP,      mos6502_ImpMode,     mos6502_DEX);
+    Inst(DEX_IMP,      mos6502_ImpMode,     mos6502_DEX, "DEX");
 
-    Inst(DEY_IMP,      mos6502_ImpMode,     mos6502_DEY);
+    Inst(DEY_IMP,      mos6502_ImpMode,     mos6502_DEY, "DEY");
 
-    Inst(EOR_IMM,      mos6502_ImmMode,     mos6502_EOR);
-    Inst(EOR_ZPG,      mos6502_ZpgMode,     mos6502_EOR);
-    Inst(EOR_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_EOR);
-    Inst(EOR_ABS,      mos6502_AbsMode,     mos6502_EOR);
-    Inst(EOR_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_EOR);
-    Inst(EOR_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_EOR);
-    Inst(EOR_XIDX_IND, mos6502_XIdxIndMode, mos6502_EOR);
-    Inst(EOR_IND_YIDX, mos6502_IndYIdxMode, mos6502_EOR);
+    Inst(EOR_IMM,      mos6502_ImmMode,     mos6502_EOR, "EOR");
+    Inst(EOR_ZPG,      mos6502_ZpgMode,     mos6502_EOR, "EOR");
+    Inst(EOR_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_EOR, "EOR");
+    Inst(EOR_ABS,      mos6502_AbsMode,     mos6502_EOR, "EOR");
+    Inst(EOR_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_EOR, "EOR");
+    Inst(EOR_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_EOR, "EOR");
+    Inst(EOR_XIDX_IND, mos6502_XIdxIndMode, mos6502_EOR, "EOR");
+    Inst(EOR_IND_YIDX, mos6502_IndYIdxMode, mos6502_EOR, "EOR");
 
-    Inst(INC_ZPG,      mos6502_ZpgMode,     mos6502_INC);
-    Inst(INC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_INC);
-    Inst(INC_ABS,      mos6502_AbsMode,     mos6502_INC);
-    Inst(INC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_INC);
+    Inst(INC_ZPG,      mos6502_ZpgMode,     mos6502_INC, "INC");
+    Inst(INC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_INC, "INC");
+    Inst(INC_ABS,      mos6502_AbsMode,     mos6502_INC, "INC");
+    Inst(INC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_INC, "INC");
 
-    Inst(INX_IMP,      mos6502_ImpMode,     mos6502_INX);
+    Inst(INX_IMP,      mos6502_ImpMode,     mos6502_INX, "INX");
 
-    Inst(INY_IMP,      mos6502_ImpMode,     mos6502_INY);
+    Inst(INY_IMP,      mos6502_ImpMode,     mos6502_INY, "INY");
 
-    Inst(JMP_ABS,      mos6502_AbsMode,     mos6502_JMP);
-    Inst(JMP_IND,      mos6502_IndMode,     mos6502_JMP);
+    Inst(JMP_ABS,      mos6502_AbsMode,     mos6502_JMP, "JMP");
+    Inst(JMP_IND,      mos6502_IndMode,     mos6502_JMP, "JMP");
 
-    Inst(JSR_ABS,      mos6502_AbsMode,     mos6502_JSR);
+    Inst(JSR_ABS,      mos6502_AbsMode,     mos6502_JSR, "JSR");
 
-    Inst(LDA_IMM,      mos6502_ImmMode,     mos6502_LDA);
-    Inst(LDA_ZPG,      mos6502_ZpgMode,     mos6502_LDA);
-    Inst(LDA_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_LDA);
-    Inst(LDA_ABS,      mos6502_AbsMode,     mos6502_LDA);
-    Inst(LDA_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_LDA);
-    Inst(LDA_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_LDA);
-    Inst(LDA_XIDX_IND, mos6502_XIdxIndMode, mos6502_LDA);
-    Inst(LDA_IND_YIDX, mos6502_IndYIdxMode, mos6502_LDA);
+    Inst(LDA_IMM,      mos6502_ImmMode,     mos6502_LDA, "LDA");
+    Inst(LDA_ZPG,      mos6502_ZpgMode,     mos6502_LDA, "LDA");
+    Inst(LDA_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_LDA, "LDA");
+    Inst(LDA_ABS,      mos6502_AbsMode,     mos6502_LDA, "LDA");
+    Inst(LDA_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_LDA, "LDA");
+    Inst(LDA_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_LDA, "LDA");
+    Inst(LDA_XIDX_IND, mos6502_XIdxIndMode, mos6502_LDA, "LDA");
+    Inst(LDA_IND_YIDX, mos6502_IndYIdxMode, mos6502_LDA, "LDA");
 
-    Inst(LDX_IMM,      mos6502_ImmMode,     mos6502_LDX);
-    Inst(LDX_ZPG,      mos6502_ZpgMode,     mos6502_LDX);
-    Inst(LDX_ZPG_YIDX, mos6502_ZpgYIdxMode, mos6502_LDX);
-    Inst(LDX_ABS,      mos6502_AbsMode,     mos6502_LDX);
-    Inst(LDX_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_LDX);
+    Inst(LDX_IMM,      mos6502_ImmMode,     mos6502_LDX, "LDX");
+    Inst(LDX_ZPG,      mos6502_ZpgMode,     mos6502_LDX, "LDX");
+    Inst(LDX_ZPG_YIDX, mos6502_ZpgYIdxMode, mos6502_LDX, "LDX");
+    Inst(LDX_ABS,      mos6502_AbsMode,     mos6502_LDX, "LDX");
+    Inst(LDX_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_LDX, "LDX");
 
-    Inst(LDY_IMM,      mos6502_ImmMode,     mos6502_LDY);
-    Inst(LDY_ZPG,      mos6502_ZpgMode,     mos6502_LDY);
-    Inst(LDY_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_LDY);
-    Inst(LDY_ABS,      mos6502_AbsMode,     mos6502_LDY);
-    Inst(LDY_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_LDY);
+    Inst(LDY_IMM,      mos6502_ImmMode,     mos6502_LDY, "LDY");
+    Inst(LDY_ZPG,      mos6502_ZpgMode,     mos6502_LDY, "LDY");
+    Inst(LDY_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_LDY, "LDY");
+    Inst(LDY_ABS,      mos6502_AbsMode,     mos6502_LDY, "LDY");
+    Inst(LDY_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_LDY, "LDY");
 
-    Inst(LSR_ACC,      mos6502_AccMode,     mos6502_LSR_AccMode);
-    Inst(LSR_ZPG,      mos6502_ZpgMode,     mos6502_LSR);
-    Inst(LSR_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_LSR);
-    Inst(LSR_ABS,      mos6502_AbsMode,     mos6502_LSR);
-    Inst(LSR_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_LSR);
+    Inst(LSR_ACC,      mos6502_AccMode,     mos6502_LSR_AccMode, "LSR");
+    Inst(LSR_ZPG,      mos6502_ZpgMode,     mos6502_LSR, "LSR");
+    Inst(LSR_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_LSR, "LSR");
+    Inst(LSR_ABS,      mos6502_AbsMode,     mos6502_LSR, "LSR");
+    Inst(LSR_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_LSR, "LSR");
 
-    Inst(NOP_IMP,      mos6502_ImpMode,     mos6502_NOP);
+    Inst(NOP_IMP,      mos6502_ImpMode,     mos6502_NOP, "NOP");
 
-    Inst(ORA_IMM,      mos6502_ImmMode,     mos6502_ORA);
-    Inst(ORA_ZPG,      mos6502_ZpgMode,     mos6502_ORA);
-    Inst(ORA_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ORA);
-    Inst(ORA_ABS,      mos6502_AbsMode,     mos6502_ORA);
-    Inst(ORA_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ORA);
-    Inst(ORA_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_ORA);
-    Inst(ORA_XIDX_IND, mos6502_XIdxIndMode, mos6502_ORA);
-    Inst(ORA_IND_YIDX, mos6502_IndYIdxMode, mos6502_ORA);
+    Inst(ORA_IMM,      mos6502_ImmMode,     mos6502_ORA, "ORA");
+    Inst(ORA_ZPG,      mos6502_ZpgMode,     mos6502_ORA, "ORA");
+    Inst(ORA_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ORA, "ORA");
+    Inst(ORA_ABS,      mos6502_AbsMode,     mos6502_ORA, "ORA");
+    Inst(ORA_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ORA, "ORA");
+    Inst(ORA_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_ORA, "ORA");
+    Inst(ORA_XIDX_IND, mos6502_XIdxIndMode, mos6502_ORA, "ORA");
+    Inst(ORA_IND_YIDX, mos6502_IndYIdxMode, mos6502_ORA, "ORA");
 
-    Inst(PHA_IMP,      mos6502_ImpMode,     mos6502_PHA);
+    Inst(PHA_IMP,      mos6502_ImpMode,     mos6502_PHA, "PHA");
 
-    Inst(PHP_IMP,      mos6502_ImpMode,     mos6502_PHP);
+    Inst(PHP_IMP,      mos6502_ImpMode,     mos6502_PHP, "PHP");
 
-    Inst(PLA_IMP,      mos6502_ImpMode,     mos6502_PLA);
+    Inst(PLA_IMP,      mos6502_ImpMode,     mos6502_PLA, "PLA");
 
-    Inst(PLP_IMP,      mos6502_ImpMode,     mos6502_PLP);
+    Inst(PLP_IMP,      mos6502_ImpMode,     mos6502_PLP, "PLP");
 
-    Inst(ROL_ACC,      mos6502_AccMode,     mos6502_ROL_AccMode);
-    Inst(ROL_ZPG,      mos6502_ZpgMode,     mos6502_ROL);
-    Inst(ROL_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ROL);
-    Inst(ROL_ABS,      mos6502_AbsMode,     mos6502_ROL);
-    Inst(ROL_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ROL);
+    Inst(ROL_ACC,      mos6502_AccMode,     mos6502_ROL_AccMode, "ROL");
+    Inst(ROL_ZPG,      mos6502_ZpgMode,     mos6502_ROL, "ROL");
+    Inst(ROL_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ROL, "ROL");
+    Inst(ROL_ABS,      mos6502_AbsMode,     mos6502_ROL, "ROL");
+    Inst(ROL_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ROL, "ROL");
 
-    Inst(ROR_ACC,      mos6502_AccMode,     mos6502_ROR_AccMode);
-    Inst(ROR_ZPG,      mos6502_ZpgMode,     mos6502_ROR);
-    Inst(ROR_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ROR);
-    Inst(ROR_ABS,      mos6502_AbsMode,     mos6502_ROR);
-    Inst(ROR_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ROR);
+    Inst(ROR_ACC,      mos6502_AccMode,     mos6502_ROR_AccMode, "ROR");
+    Inst(ROR_ZPG,      mos6502_ZpgMode,     mos6502_ROR, "ROR");
+    Inst(ROR_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_ROR, "ROR");
+    Inst(ROR_ABS,      mos6502_AbsMode,     mos6502_ROR, "ROR");
+    Inst(ROR_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_ROR, "ROR");
 
-    Inst(RTI_IMP,      mos6502_ImpMode,     mos6502_RTI);
+    Inst(RTI_IMP,      mos6502_ImpMode,     mos6502_RTI, "RTI");
 
-    Inst(RTS_IMP,      mos6502_ImpMode,     mos6502_RTS);
+    Inst(RTS_IMP,      mos6502_ImpMode,     mos6502_RTS, "RTS");
 
-    Inst(SBC_IMM,      mos6502_ImmMode,     mos6502_SBC);
-    Inst(SBC_ZPG,      mos6502_ZpgMode,     mos6502_SBC);
-    Inst(SBC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_SBC);
-    Inst(SBC_ABS,      mos6502_AbsMode,     mos6502_SBC);
-    Inst(SBC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_SBC);
-    Inst(SBC_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_SBC);
-    Inst(SBC_XIDX_IND, mos6502_XIdxIndMode, mos6502_SBC);
-    Inst(SBC_IND_YIDX, mos6502_IndYIdxMode, mos6502_SBC);
+    Inst(SBC_IMM,      mos6502_ImmMode,     mos6502_SBC, "SBC");
+    Inst(SBC_ZPG,      mos6502_ZpgMode,     mos6502_SBC, "SBC");
+    Inst(SBC_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_SBC, "SBC");
+    Inst(SBC_ABS,      mos6502_AbsMode,     mos6502_SBC, "SBC");
+    Inst(SBC_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_SBC, "SBC");
+    Inst(SBC_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_SBC, "SBC");
+    Inst(SBC_XIDX_IND, mos6502_XIdxIndMode, mos6502_SBC, "SBC");
+    Inst(SBC_IND_YIDX, mos6502_IndYIdxMode, mos6502_SBC, "SBC");
 
-    Inst(SEC_IMP,      mos6502_ImpMode,     mos6502_SEC);
+    Inst(SEC_IMP,      mos6502_ImpMode,     mos6502_SEC, "SEC");
 
-    Inst(SED_IMP,      mos6502_ImpMode,     mos6502_SED);
+    Inst(SED_IMP,      mos6502_ImpMode,     mos6502_SED, "SED");
 
-    Inst(SEI_IMP,      mos6502_ImpMode,     mos6502_SEI);
+    Inst(SEI_IMP,      mos6502_ImpMode,     mos6502_SEI, "SEI");
 
-    Inst(STA_ZPG,      mos6502_ZpgMode,     mos6502_STA);
-    Inst(STA_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_STA);
-    Inst(STA_ABS,      mos6502_AbsMode,     mos6502_STA);
-    Inst(STA_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_STA);
-    Inst(STA_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_STA);
-    Inst(STA_XIDX_IND, mos6502_XIdxIndMode, mos6502_STA);
-    Inst(STA_IND_YIDX, mos6502_IndYIdxMode, mos6502_STA);
+    Inst(STA_ZPG,      mos6502_ZpgMode,     mos6502_STA, "STA");
+    Inst(STA_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_STA, "STA");
+    Inst(STA_ABS,      mos6502_AbsMode,     mos6502_STA, "STA");
+    Inst(STA_ABS_XIDX, mos6502_AbsXIdxMode, mos6502_STA, "STA");
+    Inst(STA_ABS_YIDX, mos6502_AbsYIdxMode, mos6502_STA, "STA");
+    Inst(STA_XIDX_IND, mos6502_XIdxIndMode, mos6502_STA, "STA");
+    Inst(STA_IND_YIDX, mos6502_IndYIdxMode, mos6502_STA, "STA");
 
-    Inst(STX_ZPG,      mos6502_ZpgMode,     mos6502_STX);
-    Inst(STX_ZPG_YIDX, mos6502_ZpgYIdxMode, mos6502_STX);
-    Inst(STX_ABS,      mos6502_AbsMode,     mos6502_STX);
+    Inst(STX_ZPG,      mos6502_ZpgMode,     mos6502_STX, "STX");
+    Inst(STX_ZPG_YIDX, mos6502_ZpgYIdxMode, mos6502_STX, "STX");
+    Inst(STX_ABS,      mos6502_AbsMode,     mos6502_STX, "STX");
 
-    Inst(STY_ZPG,      mos6502_ZpgMode,     mos6502_STY);
-    Inst(STY_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_STY);
-    Inst(STY_ABS,      mos6502_AbsMode,     mos6502_STY);
+    Inst(STY_ZPG,      mos6502_ZpgMode,     mos6502_STY, "STY");
+    Inst(STY_ZPG_XIDX, mos6502_ZpgXIdxMode, mos6502_STY, "STY");
+    Inst(STY_ABS,      mos6502_AbsMode,     mos6502_STY, "STY");
 
-    Inst(TAX_IMP,      mos6502_ImpMode,     mos6502_TAX);
+    Inst(TAX_IMP,      mos6502_ImpMode,     mos6502_TAX, "TAX");
 
-    Inst(TAY_IMP,      mos6502_ImpMode,     mos6502_TAY);
+    Inst(TAY_IMP,      mos6502_ImpMode,     mos6502_TAY, "TAY");
 
-    Inst(TSX_IMP,      mos6502_ImpMode,     mos6502_TSX);
+    Inst(TSX_IMP,      mos6502_ImpMode,     mos6502_TSX, "TSX");
 
-    Inst(TXA_IMP,      mos6502_ImpMode,     mos6502_TXA);
+    Inst(TXA_IMP,      mos6502_ImpMode,     mos6502_TXA, "TXA");
 
-    Inst(TXS_IMP,      mos6502_ImpMode,     mos6502_TXS);
+    Inst(TXS_IMP,      mos6502_ImpMode,     mos6502_TXS, "TXS");
 
-    Inst(TYA_IMP,      mos6502_ImpMode,     mos6502_TYA);
+    Inst(TYA_IMP,      mos6502_ImpMode,     mos6502_TYA, "TYA");
+
+    Inst(HLT_IMP,      mos6502_ImpMode,     mos6502_NOP, "HLT");
 
     _INITIALIZED = 1;
 }
@@ -1157,4 +1164,268 @@ void mos6502_TYA(MOS6502 *cpu, uint16_t src)
     SET_N(cpu->Y | 0b10000000);
     SET_Z(!cpu->Y);
     cpu->A = cpu->Y;
+}
+
+void mos6502_disassemble(MOS6502 *cpu, uint16_t count, uint16_t start_addr, uint16_t **addrs, char ***assembly)
+{
+    uint16_t addr = start_addr;
+    uint16_t lo;
+    uint16_t hi;
+    uint8_t opcode;
+    uint8_t value;
+
+    *assembly = calloc(count, sizeof(char*));
+    if (*assembly == NULL)
+        exit(-1);
+
+    *addrs = calloc(count, sizeof(uint16_t));
+    if (*addrs == NULL)
+        exit(-1);
+
+    for (int i = 0; i < count; i++)
+    {
+        (*assembly)[i] = (char *) calloc(14, sizeof(char));
+        if ((*assembly)[i] == NULL)
+            exit(-1);
+
+        (*addrs)[i] = addr;
+        opcode = cpu->read(addr++);
+
+        if (instructions[opcode].mode == mos6502_ImpMode)
+        {
+            sprintf((*assembly)[i], "%s", instructions[opcode].mnemonic);
+        }
+        else if (instructions[opcode].mode == mos6502_ImmMode)
+        {
+            value = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s #$%02X", instructions[opcode].mnemonic, value);
+        }
+        else if (instructions[opcode].mode == mos6502_ZpgMode)
+        {
+            value = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s $%02X", instructions[opcode].mnemonic, value);
+        }
+        else if (instructions[opcode].mode == mos6502_ZpgXIdxMode)
+        {
+            value = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s $%02X, X", instructions[opcode].mnemonic, value);
+        }
+        else if (instructions[opcode].mode == mos6502_ZpgYIdxMode)
+        {
+            value = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s $%02X, Y", instructions[opcode].mnemonic, value);
+        }
+        else if (instructions[opcode].mode == mos6502_XIdxIndMode)
+        {
+            lo = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s ($%02X, X)", instructions[opcode].mnemonic, lo);
+        }
+        else if (instructions[opcode].mode == mos6502_IndYIdxMode)
+        {
+            lo = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s ($%02X), Y", instructions[opcode].mnemonic, lo);
+        }
+        else if (instructions[opcode].mode == mos6502_AbsMode)
+        {
+            lo = cpu->read(addr++);
+            hi = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s $%04X", instructions[opcode].mnemonic, (uint16_t)(hi << 8) | lo);
+        }
+        else if (instructions[opcode].mode == mos6502_AbsXIdxMode)
+        {
+            lo = cpu->read(addr++);
+            hi = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s $%04X, X", instructions[opcode].mnemonic, (uint16_t)(hi << 8) | lo);
+        }
+        else if (instructions[opcode].mode == mos6502_AbsYIdxMode)
+        {
+            lo = cpu->read(addr++);
+            hi = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s $%04X, Y", instructions[opcode].mnemonic, (uint16_t)(hi << 8) | lo);
+        }
+        else if (instructions[opcode].mode == mos6502_IndMode)
+        {
+            lo = cpu->read(addr++);
+            hi = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s ($%04X)", instructions[opcode].mnemonic, (uint16_t)(hi << 8) | lo);
+        }
+        else if (instructions[opcode].mode == mos6502_RelMode)
+        {
+            value = cpu->read(addr++);
+            sprintf((*assembly)[i], "%s [$%02X]", instructions[opcode].mnemonic, value);
+        }
+    }
+}
+
+void _mos6502_build_zpg_rows(MOS6502 *cpu, char ***rows)
+{
+    int cursor;
+
+    *rows = calloc(16, sizeof(char*));
+    if (*rows == NULL)
+        exit(-1);
+
+    for (int i = 0; i < 16; i++)
+    {
+        (*rows)[i] = calloc(53, sizeof(char));
+        if ((*rows)[i] == NULL)
+            exit(-1);
+
+        cursor = 0;
+        cursor += sprintf((*rows)[i] + cursor, "$%02X:", i * 16);
+
+        for (int j = 0; j < 16; j++)
+            cursor += sprintf((*rows)[i] + cursor, " %02X", cpu->read((ZPG_H + (i * 16)) + j));
+    }
+}
+
+void _mos6502_build_prog_rows(MOS6502 *cpu, char ***rows)
+{
+    uint16_t *addrs;
+    char **assembly;
+
+    mos6502_disassemble(cpu, 24, cpu->PC - 9, &addrs, &assembly);
+
+    *rows = calloc(42, sizeof(char*));
+    if (*rows == NULL)
+        exit(-1);
+
+    for (int i = 0; i < 24; i++)
+    {
+        (*rows)[i] = calloc(30, sizeof(char));
+        if ((*rows)[i] == NULL)
+            exit(-1);
+
+        sprintf((*rows)[i], "$%04X: %-13.13s", addrs[i], assembly[i]);
+    }
+
+    for (int i = 0; i < 24; i++)
+        free(assembly[i]);
+
+    free(addrs);
+    free(assembly);
+}
+
+void _mos6502_build_stack_rows(MOS6502 *cpu, char ***rows)
+{
+    uint8_t addr;
+
+    *rows = calloc(24, sizeof(char*));
+    if (*rows == NULL)
+        exit(-1);
+
+    for (int i = 0; i < 24; i++)
+    {
+        (*rows)[i] = calloc(21, sizeof(char));
+        if ((*rows)[i] == NULL)
+            exit(-1);
+
+        addr = cpu->SP + i - 7;
+        sprintf((*rows)[i], "%s$%04X%s: %02X", addr == cpu->SP ? GREEN_TXT : RESET_TXT, SP_H | addr, RESET_TXT, cpu->read(SP_H | addr));
+    }
+}
+
+void mos6502_print(MOS6502 *cpu)
+{
+    char **zpg_rows;
+    char **prog_rows;
+    char **stack_rows;
+
+    _mos6502_build_zpg_rows(cpu, &zpg_rows);
+    _mos6502_build_prog_rows(cpu, &prog_rows);
+    _mos6502_build_stack_rows(cpu, &stack_rows);
+
+    printf(
+        STATE_FMT,
+        cpu->instr_cycles,
+        IS_N ? GREEN_TXT : RED_TXT,
+        IS_V ? GREEN_TXT : RED_TXT,
+        IS_B ? GREEN_TXT : RED_TXT,
+        IS_D ? GREEN_TXT : RED_TXT,
+        IS_I ? GREEN_TXT : RED_TXT,
+        IS_Z ? GREEN_TXT : RED_TXT,
+        IS_C ? GREEN_TXT : RED_TXT,
+        RESET_TXT,
+        prog_rows[0],
+        stack_rows[0],
+        cpu->PC,
+        prog_rows[1],
+        stack_rows[1],
+        SP_H + cpu->SP,
+        prog_rows[2],
+        stack_rows[2],
+        cpu->A,
+        prog_rows[3],
+        stack_rows[3],
+        cpu->X,
+        prog_rows[4],
+        stack_rows[4],
+        cpu->Y,
+        prog_rows[5],
+        stack_rows[5],
+        prog_rows[6],
+        stack_rows[6],
+        prog_rows[7],
+        stack_rows[7],
+        zpg_rows[0],
+        prog_rows[8],
+        stack_rows[8],
+        zpg_rows[1],
+        prog_rows[9],
+        stack_rows[9],
+        zpg_rows[2],
+        prog_rows[10],
+        stack_rows[10],
+        zpg_rows[3],
+        prog_rows[11],
+        stack_rows[11],
+        zpg_rows[4],
+        prog_rows[12],
+        stack_rows[12],
+        zpg_rows[5],
+        prog_rows[13],
+        stack_rows[13],
+        zpg_rows[6],
+        prog_rows[14],
+        stack_rows[14],
+        zpg_rows[7],
+        prog_rows[15],
+        stack_rows[15],
+        zpg_rows[8],
+        prog_rows[16],
+        stack_rows[16],
+        zpg_rows[9],
+        prog_rows[17],
+        stack_rows[17],
+        zpg_rows[10],
+        prog_rows[18],
+        stack_rows[18],
+        zpg_rows[11],
+        prog_rows[19],
+        stack_rows[19],
+        zpg_rows[12],
+        prog_rows[20],
+        stack_rows[20],
+        zpg_rows[13],
+        prog_rows[21],
+        stack_rows[21],
+        zpg_rows[14],
+        prog_rows[22],
+        stack_rows[22],
+        zpg_rows[15],
+        prog_rows[23],
+        stack_rows[23]
+    );
+
+    for (int i = 0; i < 16; i++)
+        free(zpg_rows[i]);
+    free(zpg_rows);
+
+    for (int i = 0; i < 24; i++)
+        free(prog_rows[i]);
+    free(prog_rows);
+
+    for (int i = 0; i < 24; i++)
+        free(stack_rows[i]);
+    free(stack_rows);
 }
