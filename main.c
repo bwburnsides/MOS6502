@@ -14,10 +14,6 @@ uint8_t memory[ADDR_SPACE_SIZE];
 
 uint8_t DebugBusRead(uint16_t addr);
 void DebugBusWrite(uint16_t addr, uint8_t data);
-void print_cpu(MOS6502 *cpu);
-void build_zpg_rows(MOS6502 *cpu, char ***rows);
-void build_prog_rows(MOS6502 *cpu, char ***rows);
-void build_stack_rows(MOS6502 *cpu, char ***rows);
 
 
 int main(int argc, char **argv)
