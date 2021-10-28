@@ -22,7 +22,6 @@ void DebugBusWrite(uint16_t addr, uint8_t data);
 int main(int argc, char **argv)
 {
     MOS6502 *cpu;
-    int cpu_run_rv = 0;
 
     cpu = mos6502(DebugBusRead, DebugBusWrite);
     if (cpu == NULL)
