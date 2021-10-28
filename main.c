@@ -5,6 +5,7 @@
 #include <inttypes.h>
 
 #include "mos6502.h"
+#include "mos6502_display.h"
 
 #define MEM_IMAGE "fib.bin"
 #define MAX_INSTR_COUNT 100000
