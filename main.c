@@ -7,7 +7,8 @@
 #include "mos6502.h"
 #include "mos6502_display.h"
 
-#define MEM_IMAGE "fib.bin"
+#define MEM_IMAGE "attack.bin"
+#define MEM_IMAGE_OUT "attack_out.bin"
 #define MAX_INSTR_COUNT 100000
 
 #define ADDR_SPACE_SIZE 64 * 1024
@@ -15,6 +16,8 @@ uint8_t memory[ADDR_SPACE_SIZE];
 
 void DebugBusInit(MOS6502 *cpu, char *mem_fname);
 void DebugBusRun(MOS6502 *cpu, int max_instr_count);
+void DebugBusCleanup(MOS6502 *cpu, char *out_fname);
+
 uint8_t DebugBusRead(uint16_t addr);
 void DebugBusWrite(uint16_t addr, uint8_t data);
 
@@ -29,6 +32,7 @@ int main(int argc, char **argv)
 
     DebugBusInit(cpu, MEM_IMAGE);
     DebugBusRun(cpu, MAX_INSTR_COUNT);
+    DebugBusCleanup(cpu, MEM_IMAGE_OUT);
 
     free(cpu);
     return 0;
@@ -60,6 +64,22 @@ void DebugBusRun(MOS6502 *cpu, int max_instr_count)
         cpu_run_rv = mos6502_run(cpu, 1);
         mos6502_print(cpu);
     }
+}
+
+void DebugBusCleanup(MOS6502 *cpu, char *out_fname)
+{
+    FILE *fp;
+    size_t num_bytes;
+
+    fp = fopen(out_fname, "wb");
+    if (fp == NULL)
+        exit(-1);
+
+    num_bytes = fwrite(memory, sizeof(uint8_t), ADDR_SPACE_SIZE, fp);
+    fclose(fp);
+
+    if (num_bytes != ADDR_SPACE_SIZE)
+        exit(-1);
 }
 
 uint8_t DebugBusRead(uint16_t addr)
