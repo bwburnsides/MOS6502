@@ -9,9 +9,6 @@
 
 UNAME_BUF_LEN = 20
 
-; Assume this data is received byte-by-byte over some serial connection (UART/RS-232)
-received_data:  #d "JRushing\0"
-
 ; rst defines program entry point
 rst:
 
@@ -92,9 +89,14 @@ greeter:
         #d "Hello, "
     .hello_len = $ - .hello
 
+#res 1024
 nmi:
 irq:
     rti
+
+; Assume this data is received byte-by-byte over some serial connection (UART/RS-232)
+received_data:
+    #d incbin("malicious_code.bin")
 
 #bank vectors
 #d16 nmi[7:0] @ nmi[15:8]

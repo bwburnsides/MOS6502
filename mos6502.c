@@ -34,11 +34,10 @@ int mos6502_run(MOS6502 *cpu, uint64_t cycles)
     {
         // Fetch
         cpu->IR = cpu->read(cpu->PC);
+        cpu->PC++;
 
         if (cpu->IR == HLT_IMP)
             return -1;
-
-        cpu->PC++;
 
         inst = instructions[cpu->IR];
 
@@ -339,7 +338,7 @@ uint16_t mos6502_IndMode(MOS6502 *cpu)
     uint16_t addrH = cpu->read(cpu->PC++);
     uint16_t addr = (addrH << 8) + addrL;
 
-    return (cpu->read(addr) << 8) + cpu->read(addr + 1);
+    return (cpu->read(addr + 1) << 8) + cpu->read(addr);
 }
 
 uint16_t mos6502_RelMode(MOS6502 *cpu)
@@ -1065,7 +1064,7 @@ void mos6502_RTS(MOS6502 *cpu, uint16_t src)
     cpu->SP++;
     pc_hi = cpu->read(SP_H + cpu->SP);
 
-    cpu->PC = (pc_hi << 8) | pc_lo;
+    cpu->PC = ((pc_hi << 8) | pc_lo) + 1;
 }
 
 void mos6502_SBC(MOS6502 *cpu, uint16_t src)
