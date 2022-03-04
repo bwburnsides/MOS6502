@@ -9,45 +9,32 @@
 
 UNAME_BUF_LEN = 20
 
-; rst defines program entry point
-rst:
+rst:  ; defines program entry point since its installed in the reset vector location
 
-; Reads in data from the "received_data" buffer into the "user_name" buffer.
+; Copies data from the :received_data: buffer into the :user_name: buffer.
 ; It copies until it reads a null terminating '\0' character. It's an unsafe block.
 receive_username:
-    ldx #0  ; offset into received_data to read from and into user_name to write to
+    ldx #0                      ; offset into received_data to read from and into user_name to write to
     .copy_username_loop:
-        lda received_data, x  ; read x-th byte from received_data
-        sta user_name, x      ; write that byte to x-t byte in user_name buffer
+        lda received_data, x    ; read x-th byte from received_data
+        sta user_name, x        ; write that byte to x-th byte in user_name buffer
 
-        ; if that byte is a null terminator, then we are done with the copy
+                                ; if that byte is a null terminator, then we are done with the copy
         cmp #"\0"
         beq greeter
 
-        ; otherwise, increment the pointer and continue
+                                ; otherwise, increment the pointer and continue
         inx
         jmp .copy_username_loop
 
 ; the user's name will be stored here, in a UNAME_BUF_LEN sized byte buffer
 user_name:  #res UNAME_BUF_LEN
 
-; This block writes the "Hello, " followed by the string in block user_name
-; to the beginning of the Zero Page.
-
-; It is our attack target. There is another block of code which "receives"
-; the user name "from an IO device" and writes it into the user_name buffer.
-
-; The receive block will not check the input data for a null terminator, and
-; so ill-formed input that is lacking a null terminator will overflow the end
-; of the user_name buffer.
-
-; Since the attack target is located after the buffer in memory, a sufficiently
-; overflowed buffer will run into this block of code. If the input data is
-; maliciously crafted, arbitrary code could be injected into this block
-; when execution jumps to this location, instead of being greeted on the Zero
-; Page, it will be revealed that they had been pwned.
+; Displays "Hello, <user_name>!" to the Zero Page, using the data in :user_name:
+; to populate the <user_name> field. This is the attack target.
 greeter:
-    ; while x < .hello_len, write hello[x] to zp[x]
+    ; This block could use more comments, however it mostly exists to be overwritten
+    ; so that is not my highest priority.
     .write_hello:
         ldx #0
 
@@ -89,14 +76,15 @@ greeter:
         #d "Hello, "
     .hello_len = $ - .hello
 
-#res 1024
+#res 4096
+
+; Conceptually, this data is likely received byte-wise over some serial connection,
+; such as a keyboard controller or UART. Its been directly included for simplicity.
+received_data:  #d incbin("malicious_code.bin")
+
 nmi:
 irq:
     rti
-
-; Assume this data is received byte-by-byte over some serial connection (UART/RS-232)
-received_data:
-    #d incbin("malicious_code.bin")
 
 #bank vectors
 #d16 nmi[7:0] @ nmi[15:8]
