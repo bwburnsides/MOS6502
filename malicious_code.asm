@@ -1,6 +1,9 @@
 #include "cpu6502.asm"
 
-#d "You are being hacked"  ; overflow the buffer
+; Overflow the buffer
+; For the sake of simplicity, we will assume the attacker somehow knows that the
+; buffer is exactly 20 bytes long.
+#d "You are being hacked"
 
 RTS_OPCODE = 0x60
 JMP_ABS_OPCODE = 0x4C
@@ -17,6 +20,11 @@ PATCH_EXIT = 0xFC  ; pointer to entry point of patch sequence
 RTS_LOCATION = 0xFF60  ; location to write RTS opcode for PC determination
 PATCH_ENTER = 0xFF61  ; pointer to exit destination of patch sequence
 
+; This block of code displays a message to the Zero Page to signify that the payload
+; has been successfully injected into a target system. The bulk of the work in this
+; block is related to dealing with the absolute memory address of the message string
+; we are outputting to the Zero Page. We must patch in that address at runtime, since
+; the payload could be injected anywhere in RAM.
 malicious_code:
     ; The code must determine where in RAM its been installed, so that it can
     ; calculate the proper address to refer to the message string by.
